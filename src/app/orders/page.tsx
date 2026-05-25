@@ -12,12 +12,23 @@ type Customer = {
   address: string | null;
 };
 
+type Product = {
+  id: string;
+  name: string;
+  sku: string | null;
+  unit: string;
+  price: number;
+  isActive: boolean;
+};
+
 type OrderItem = {
   id: string;
+  productId: string | null;
   productName: string;
   quantity: number;
   price: number;
   total: number;
+  product?: Product | null;
 };
 
 type OrderStatus =
@@ -53,15 +64,13 @@ type Order = {
 };
 
 type FormItem = {
-  productName: string;
+  productId: string;
   quantity: string;
-  price: string;
 };
 
 const initialItem: FormItem = {
-  productName: '',
+  productId: '',
   quantity: '1',
-  price: '',
 };
 
 const nextStatusMap: Record<OrderStatus, OrderStatus | null> = {
@@ -133,6 +142,7 @@ export default function OrdersPage() {
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [customerId, setCustomerId] = useState('');
@@ -146,14 +156,20 @@ export default function OrdersPage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
+  const productsById = useMemo(() => {
+    return new Map(products.map((product) => [product.id, product]));
+  }, [products]);
+
   const totalAmount = useMemo(() => {
     return items.reduce((sum, item) => {
+      const product = productsById.get(item.productId);
       const quantity = Number(item.quantity) || 0;
-      const price = Number(item.price) || 0;
 
-      return sum + quantity * price;
+      if (!product) return sum;
+
+      return sum + quantity * product.price;
     }, 0);
-  }, [items]);
+  }, [items, productsById]);
 
   const paidAmountNumber = Number(paidAmount) || 0;
   const debtAmount = Math.max(totalAmount - paidAmountNumber, 0);
@@ -193,38 +209,59 @@ export default function OrdersPage() {
 
       loadCurrentUser();
 
-      const [ordersResponse, customersResponse] = await Promise.all([
-        fetch(`${apiUrl}/orders`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }),
-        fetch(`${apiUrl}/customers`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }),
-      ]);
+      const [ordersResponse, customersResponse, productsResponse] =
+        await Promise.all([
+          fetch(`${apiUrl}/orders`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          fetch(`${apiUrl}/customers`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+          fetch(`${apiUrl}/products/active`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }),
+        ]);
 
-      if (ordersResponse.status === 401 || customersResponse.status === 401) {
+      if (
+        ordersResponse.status === 401 ||
+        customersResponse.status === 401 ||
+        productsResponse.status === 401
+      ) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
         router.push('/login');
         return;
       }
 
-      if (!ordersResponse.ok || !customersResponse.ok) {
+      if (!ordersResponse.ok || !customersResponse.ok || !productsResponse.ok) {
         throw new Error('Ma’lumotlarni yuklashda xatolik');
       }
 
       const ordersData = (await ordersResponse.json()) as Order[];
       const customersData = (await customersResponse.json()) as Customer[];
+      const productsData = (await productsResponse.json()) as Product[];
 
       setOrders(ordersData);
       setCustomers(customersData);
+      setProducts(productsData);
 
       if (!customerId && customersData.length > 0) {
         setCustomerId(customersData[0].id);
+      }
+
+      if (productsData.length > 0) {
+        setItems((current) =>
+          current.map((item) => ({
+            ...item,
+            productId: item.productId || productsData[0].id,
+          })),
+        );
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
@@ -247,7 +284,13 @@ export default function OrdersPage() {
   }
 
   function addItem() {
-    setItems((current) => [...current, { ...initialItem }]);
+    setItems((current) => [
+      ...current,
+      {
+        productId: products[0]?.id ?? '',
+        quantity: '1',
+      },
+    ]);
   }
 
   function removeItem(index: number) {
@@ -266,25 +309,27 @@ export default function OrdersPage() {
       return;
     }
 
-    const validItems = items
-      .filter((item) => item.productName.trim())
-      .map((item) => ({
-        productName: item.productName.trim(),
-        quantity: Number(item.quantity),
-        price: Number(item.price),
-      }));
-
-    if (validItems.length === 0) {
-      setError('Kamida bitta mahsulot qo‘shing');
+    if (products.length === 0) {
+      setError('Avval mahsulot qo‘shing');
       return;
     }
 
-    const hasInvalidItem = validItems.some(
-      (item) => item.quantity <= 0 || item.price < 0,
-    );
+    const validItems = items
+      .filter((item) => item.productId)
+      .map((item) => ({
+        productId: item.productId,
+        quantity: Number(item.quantity),
+      }));
+
+    if (validItems.length === 0) {
+      setError('Kamida bitta mahsulot tanlang');
+      return;
+    }
+
+    const hasInvalidItem = validItems.some((item) => item.quantity <= 0);
 
     if (hasInvalidItem) {
-      setError('Mahsulot soni 0 dan katta, narxi esa manfiy bo‘lmasligi kerak');
+      setError('Mahsulot soni 0 dan katta bo‘lishi kerak');
       return;
     }
 
@@ -324,7 +369,12 @@ export default function OrdersPage() {
       }
 
       setPaidAmount('0');
-      setItems([{ ...initialItem }]);
+      setItems([
+        {
+          productId: products[0]?.id ?? '',
+          quantity: '1',
+        },
+      ]);
 
       await loadData();
     } catch (err) {
@@ -386,9 +436,9 @@ export default function OrdersPage() {
               Zakazlar
             </h1>
             <p className="mt-2 max-w-2xl text-slate-600">
-              Sotuvchi yoki operator mijoz uchun zakaz ochadi. Tizim summa,
-              to‘lov va qarzni avtomatik hisoblaydi. Status esa role bo‘yicha
-              bosqichma-bosqich yuradi.
+              Endi zakaz mahsulotlar bazasidan tanlanadi. Narx product
+              bazasidan keladi, backend esa order ichiga snapshot qilib
+              saqlaydi.
             </p>
           </div>
 
@@ -421,8 +471,7 @@ export default function OrdersPage() {
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-1">
             <h2 className="text-lg font-bold text-slate-900">Yangi zakaz</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Mijozni tanlang, mahsulotlarni kiriting, tizim total va qarzni
-              hisoblaydi.
+              Mahsulotni bazadan tanlang. Narx avtomatik hisoblanadi.
             </p>
 
             <form onSubmit={createOrder} className="mt-5 space-y-4">
@@ -457,57 +506,98 @@ export default function OrdersPage() {
                   <button
                     type="button"
                     onClick={addItem}
-                    className="text-sm font-semibold text-slate-900 hover:underline"
+                    disabled={products.length === 0}
+                    className="text-sm font-semibold text-slate-900 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     + Qo‘shish
                   </button>
                 </div>
 
-                {items.map((item, index) => (
-                  <div
-                    key={index}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
-                  >
-                    <input
-                      value={item.productName}
-                      onChange={(event) =>
-                        updateItem(index, 'productName', event.target.value)
-                      }
-                      className="mb-3 w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
-                      placeholder="Mahsulot nomi"
-                    />
-
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <input
-                        value={item.quantity}
-                        onChange={(event) =>
-                          updateItem(index, 'quantity', event.target.value)
-                        }
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
-                        placeholder="Soni"
-                      />
-
-                      <input
-                        value={item.price}
-                        onChange={(event) =>
-                          updateItem(index, 'price', event.target.value)
-                        }
-                        className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
-                        placeholder="Narxi"
-                      />
-                    </div>
-
-                    {items.length > 1 ? (
-                      <button
-                        type="button"
-                        onClick={() => removeItem(index)}
-                        className="mt-3 text-sm font-semibold text-red-600 hover:underline"
-                      >
-                        O‘chirish
-                      </button>
-                    ) : null}
+                {products.length === 0 ? (
+                  <div className="rounded-2xl bg-amber-50 p-4 text-sm font-medium text-amber-700">
+                    Hali aktiv mahsulot yo‘q. Avval Products sahifasidan
+                    mahsulot qo‘shing.
                   </div>
-                ))}
+                ) : null}
+
+                {items.map((item, index) => {
+                  const selectedProduct = productsById.get(item.productId);
+                  const quantity = Number(item.quantity) || 0;
+                  const lineTotal = selectedProduct
+                    ? selectedProduct.price * quantity
+                    : 0;
+
+                  return (
+                    <div
+                      key={index}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <label className="mb-2 block text-xs font-semibold text-slate-500">
+                        Mahsulot
+                      </label>
+
+                      <select
+                        value={item.productId}
+                        onChange={(event) =>
+                          updateItem(index, 'productId', event.target.value)
+                        }
+                        className="mb-3 w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
+                      >
+                        {products.map((product) => (
+                          <option key={product.id} value={product.id}>
+                            {product.name} · {formatMoney(product.price)}
+                          </option>
+                        ))}
+                      </select>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div>
+                          <label className="mb-2 block text-xs font-semibold text-slate-500">
+                            Soni
+                          </label>
+                          <input
+                            value={item.quantity}
+                            onChange={(event) =>
+                              updateItem(index, 'quantity', event.target.value)
+                            }
+                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
+                            placeholder="Soni"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-xs font-semibold text-slate-500">
+                            Narx
+                          </label>
+                          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900">
+                            {selectedProduct
+                              ? formatMoney(selectedProduct.price)
+                              : '—'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 rounded-xl bg-white px-3 py-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Qator jami</span>
+                          <span className="font-bold text-slate-900">
+                            {formatMoney(lineTotal)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {items.length > 1 ? (
+                        <button
+                          type="button"
+                          onClick={() => removeItem(index)}
+                          className="mt-3 text-sm font-semibold text-red-600 hover:underline"
+                        >
+                          O‘chirish
+                        </button>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
 
               <div>
@@ -541,10 +631,19 @@ export default function OrdersPage() {
 
               <button
                 type="submit"
-                disabled={isCreating || customers.length === 0}
-                className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={
+                  isCreating || customers.length === 0 || products.length === 0
+                }
+                className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isCreating ? 'Yaratilmoqda...' : 'Zakaz yaratish'}
+                {isCreating ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <LoadingSpinner />
+                    Yaratilmoqda...
+                  </span>
+                ) : (
+                  'Zakaz yaratish'
+                )}
               </button>
             </form>
           </section>
@@ -561,10 +660,23 @@ export default function OrdersPage() {
 
             {isLoading ? (
               <div className="p-6">
-                <div className="animate-pulse space-y-4">
-                  <div className="h-24 rounded-2xl bg-slate-100" />
-                  <div className="h-24 rounded-2xl bg-slate-100" />
-                  <div className="h-24 rounded-2xl bg-slate-100" />
+                <div className="space-y-4">
+                  {[1, 2, 3].map((item) => (
+                    <div
+                      key={item}
+                      className="rounded-2xl border border-slate-100 bg-white p-5"
+                    >
+                      <div className="animate-pulse">
+                        <div className="h-4 w-40 rounded bg-slate-200" />
+                        <div className="mt-3 h-3 w-64 rounded bg-slate-100" />
+                        <div className="mt-5 flex gap-2">
+                          <div className="h-7 w-24 rounded-full bg-slate-100" />
+                          <div className="h-7 w-28 rounded-full bg-slate-100" />
+                          <div className="h-7 w-20 rounded-full bg-slate-100" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             ) : orders.length === 0 ? (
@@ -584,9 +696,17 @@ export default function OrdersPage() {
                   const nextStatus = nextStatusMap[order.status];
                   const activeStatusIndex = statusFlow.indexOf(order.status);
                   const canUpdateStatus = canSeeStatusButton(currentUser?.role);
+                  const isUpdating = updatingOrderId === order.id;
 
                   return (
-                    <div key={order.id} className="p-5 hover:bg-slate-50">
+                    <div
+                      key={order.id}
+                      className={`p-5 transition ${
+                        isUpdating
+                          ? 'bg-slate-50 opacity-70'
+                          : 'hover:bg-slate-50'
+                      }`}
+                    >
                       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                         <div className="flex-1">
                           <div className="flex flex-wrap items-center gap-2">
@@ -659,12 +779,17 @@ export default function OrdersPage() {
                               canUpdateStatus ? (
                                 <button
                                   onClick={() => updateOrderStatus(order)}
-                                  disabled={updatingOrderId === order.id}
-                                  className="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                  disabled={isUpdating}
+                                  className="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
-                                  {updatingOrderId === order.id
-                                    ? 'Yangilanmoqda...'
-                                    : statusLabels[order.status]}
+                                  {isUpdating ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                      <LoadingSpinner />
+                                      Yangilanmoqda...
+                                    </span>
+                                  ) : (
+                                    statusLabels[order.status]
+                                  )}
                                 </button>
                               ) : (
                                 <div className="rounded-xl bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-700">
