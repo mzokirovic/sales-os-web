@@ -68,10 +68,23 @@ type FormItem = {
   quantity: string;
 };
 
+type StatusFilter = 'ALL' | OrderStatus;
+type DebtFilter = 'ALL' | 'WITH_DEBT' | 'NO_DEBT';
+
 const initialItem: FormItem = {
   productId: '',
   quantity: '1',
 };
+
+const statusFlow: OrderStatus[] = [
+  'NEW',
+  'CHECKED',
+  'CONFIRMED',
+  'PREPARING',
+  'SHIPPED',
+  'DELIVERED',
+  'PAID',
+];
 
 const nextStatusMap: Record<OrderStatus, OrderStatus | null> = {
   NEW: 'CHECKED',
@@ -93,6 +106,16 @@ const statusLabels: Record<OrderStatus, string> = {
   PAID: 'Yopilgan',
 };
 
+const statusShortLabels: Record<OrderStatus, string> = {
+  NEW: 'Yangi',
+  CHECKED: 'Tekshirildi',
+  CONFIRMED: 'Tasdiqlandi',
+  PREPARING: 'Tayyorlanmoqda',
+  SHIPPED: 'Yo‘lda',
+  DELIVERED: 'Yetkazildi',
+  PAID: 'Yopildi',
+};
+
 const statusDescription: Record<OrderStatus, string> = {
   NEW: 'Yangi zakaz. Operator tekshirishi kerak.',
   CHECKED: 'Tekshirildi. Endi tasdiqlash mumkin.',
@@ -112,16 +135,6 @@ const statusBadgeClass: Record<OrderStatus, string> = {
   DELIVERED: 'bg-emerald-50 text-emerald-700',
   PAID: 'bg-slate-900 text-white',
 };
-
-const statusFlow: OrderStatus[] = [
-  'NEW',
-  'CHECKED',
-  'CONFIRMED',
-  'PREPARING',
-  'SHIPPED',
-  'DELIVERED',
-  'PAID',
-];
 
 function formatMoney(value: number) {
   return `${value.toLocaleString()} so‘m`;
@@ -149,10 +162,16 @@ export default function OrdersPage() {
   const [paidAmount, setPaidAmount] = useState('0');
   const [items, setItems] = useState<FormItem[]>([{ ...initialItem }]);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [debtFilter, setDebtFilter] = useState<DebtFilter>('ALL');
+
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -173,6 +192,35 @@ export default function OrdersPage() {
 
   const paidAmountNumber = Number(paidAmount) || 0;
   const debtAmount = Math.max(totalAmount - paidAmountNumber, 0);
+
+  const filteredOrders = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    return orders.filter((order) => {
+      const matchesSearch =
+        !query ||
+        order.customer.name.toLowerCase().includes(query) ||
+        (order.customer.phone ?? '').toLowerCase().includes(query) ||
+        (order.customer.address ?? '').toLowerCase().includes(query) ||
+        order.items.some((item) =>
+          item.productName.toLowerCase().includes(query),
+        );
+
+      const matchesStatus =
+        statusFilter === 'ALL' || order.status === statusFilter;
+
+      const matchesDebt =
+        debtFilter === 'ALL' ||
+        (debtFilter === 'WITH_DEBT' && order.debtAmount > 0) ||
+        (debtFilter === 'NO_DEBT' && order.debtAmount <= 0);
+
+      return matchesSearch && matchesStatus && matchesDebt;
+    });
+  }, [orders, searchQuery, statusFilter, debtFilter]);
+
+  const totalOpenDebt = useMemo(() => {
+    return orders.reduce((sum, order) => sum + order.debtAmount, 0);
+  }, [orders]);
 
   function getToken() {
     const token = localStorage.getItem('accessToken');
@@ -299,10 +347,17 @@ export default function OrdersPage() {
     );
   }
 
+  function resetFilters() {
+    setSearchQuery('');
+    setStatusFilter('ALL');
+    setDebtFilter('ALL');
+  }
+
   async function createOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setError('');
+    setSuccessMessage('');
 
     if (!customerId) {
       setError('Mijoz tanlash majburiy');
@@ -376,6 +431,7 @@ export default function OrdersPage() {
         },
       ]);
 
+      setSuccessMessage('Zakaz yaratildi');
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
@@ -390,6 +446,7 @@ export default function OrdersPage() {
     if (!nextStatus) return;
 
     setError('');
+    setSuccessMessage('');
     setUpdatingOrderId(order.id);
 
     try {
@@ -418,6 +475,7 @@ export default function OrdersPage() {
         throw new Error('Statusni yangilashda xatolik');
       }
 
+      setSuccessMessage('Status yangilandi');
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
@@ -436,9 +494,8 @@ export default function OrdersPage() {
               Zakazlar
             </h1>
             <p className="mt-2 max-w-2xl text-slate-600">
-              Endi zakaz mahsulotlar bazasidan tanlanadi. Narx product
-              bazasidan keladi, backend esa order ichiga snapshot qilib
-              saqlaydi.
+              Ixcham Sales OS: mahsulot tanlash, qarzni ko‘rish, status
+              yuritish va zakazlarni tez topish.
             </p>
           </div>
 
@@ -453,9 +510,7 @@ export default function OrdersPage() {
             <div className="rounded-2xl bg-white px-5 py-4 shadow-sm">
               <p className="text-sm text-slate-500">Ochiq qarz</p>
               <p className="mt-1 text-2xl font-bold text-red-600">
-                {formatMoney(
-                  orders.reduce((sum, order) => sum + order.debtAmount, 0),
-                )}
+                {formatMoney(totalOpenDebt)}
               </p>
             </div>
           </div>
@@ -464,6 +519,12 @@ export default function OrdersPage() {
         {error ? (
           <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-medium text-red-700">
             {error}
+          </div>
+        ) : null}
+
+        {successMessage ? (
+          <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-medium text-emerald-700">
+            {successMessage}
           </div>
         ) : null}
 
@@ -650,12 +711,81 @@ export default function OrdersPage() {
 
           <section className="rounded-2xl border border-slate-200 bg-white shadow-sm xl:col-span-2">
             <div className="border-b border-slate-200 p-6">
-              <h2 className="text-lg font-bold text-slate-900">
-                Zakazlar ro‘yxati
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Zakaz statusi, summa, qarz va mijoz bir joyda.
-              </p>
+              <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Zakazlar ro‘yxati
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Search va filter orqali kerakli zakazni tez toping.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={loadData}
+                  disabled={isLoading}
+                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isLoading ? 'Yuklanmoqda...' : 'Yangilash'}
+                </button>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-4">
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-900 md:col-span-2"
+                  placeholder="Mijoz, telefon, manzil yoki mahsulot qidirish..."
+                />
+
+                <select
+                  value={statusFilter}
+                  onChange={(event) =>
+                    setStatusFilter(event.target.value as StatusFilter)
+                  }
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-900"
+                >
+                  <option value="ALL">Barcha statuslar</option>
+                  {statusFlow.map((status) => (
+                    <option key={status} value={status}>
+                      {statusShortLabels[status]}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={debtFilter}
+                  onChange={(event) =>
+                    setDebtFilter(event.target.value as DebtFilter)
+                  }
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-900"
+                >
+                  <option value="ALL">Hammasi</option>
+                  <option value="WITH_DEBT">Qarzdorlar</option>
+                  <option value="NO_DEBT">Qarzsizlar</option>
+                </select>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-slate-500">
+                  Ko‘rsatilmoqda:{' '}
+                  <span className="font-bold text-slate-900">
+                    {filteredOrders.length}
+                  </span>{' '}
+                  / {orders.length}
+                </p>
+
+                {(searchQuery || statusFilter !== 'ALL' || debtFilter !== 'ALL') ? (
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="text-sm font-semibold text-slate-700 hover:underline"
+                  >
+                    Filterlarni tozalash
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             {isLoading ? (
@@ -679,20 +809,20 @@ export default function OrdersPage() {
                   ))}
                 </div>
               </div>
-            ) : orders.length === 0 ? (
+            ) : filteredOrders.length === 0 ? (
               <div className="p-6">
                 <div className="rounded-2xl bg-slate-50 p-6 text-center">
                   <p className="font-semibold text-slate-900">
-                    Hali zakaz yo‘q
+                    Zakaz topilmadi
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    Birinchi zakazni chapdagi formadan yarating.
+                    Search yoki filterlarni o‘zgartirib ko‘ring.
                   </p>
                 </div>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {orders.map((order) => {
+                {filteredOrders.map((order) => {
                   const nextStatus = nextStatusMap[order.status];
                   const activeStatusIndex = statusFlow.indexOf(order.status);
                   const canUpdateStatus = canSeeStatusButton(currentUser?.role);
@@ -702,9 +832,7 @@ export default function OrdersPage() {
                     <div
                       key={order.id}
                       className={`p-5 transition ${
-                        isUpdating
-                          ? 'bg-slate-50 opacity-70'
-                          : 'hover:bg-slate-50'
+                        isUpdating ? 'bg-slate-50 opacity-70' : 'hover:bg-slate-50'
                       }`}
                     >
                       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -719,7 +847,7 @@ export default function OrdersPage() {
                                 statusBadgeClass[order.status]
                               }`}
                             >
-                              {order.status}
+                              {statusShortLabels[order.status]}
                             </span>
                           </div>
 
@@ -753,7 +881,7 @@ export default function OrdersPage() {
                                     : 'rounded-xl bg-slate-100 px-2 py-2 text-center text-[11px] font-semibold text-slate-500'
                                 }
                               >
-                                {status}
+                                {statusShortLabels[status]}
                               </div>
                             ))}
                           </div>
@@ -769,7 +897,13 @@ export default function OrdersPage() {
 
                           <div className="mt-2 flex justify-between">
                             <span className="text-slate-500">Qarz</span>
-                            <span className="font-bold text-red-600">
+                            <span
+                              className={
+                                order.debtAmount > 0
+                                  ? 'font-bold text-red-600'
+                                  : 'font-bold text-emerald-600'
+                              }
+                            >
                               {formatMoney(order.debtAmount)}
                             </span>
                           </div>
