@@ -776,7 +776,7 @@ export default function OrdersPage() {
                   / {orders.length}
                 </p>
 
-                {(searchQuery || statusFilter !== 'ALL' || debtFilter !== 'ALL') ? (
+                {searchQuery || statusFilter !== 'ALL' || debtFilter !== 'ALL' ? (
                   <button
                     type="button"
                     onClick={resetFilters}
@@ -832,109 +832,151 @@ export default function OrdersPage() {
                     <div
                       key={order.id}
                       className={`p-5 transition ${
-                        isUpdating ? 'bg-slate-50 opacity-70' : 'hover:bg-slate-50'
+                        isUpdating
+                          ? 'bg-slate-50 opacity-70'
+                          : 'hover:bg-slate-50'
                       }`}
                     >
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-bold text-slate-900">
-                              {order.customer.name}
-                            </h3>
+                      <div className="space-y-4">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-bold text-slate-900">
+                                {order.customer.name}
+                              </h3>
 
-                            <span
-                              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                statusBadgeClass[order.status]
-                              }`}
-                            >
-                              {statusShortLabels[order.status]}
-                            </span>
-                          </div>
-
-                          <p className="mt-1 text-sm text-slate-500">
-                            {order.customer.phone ?? 'Telefon yo‘q'} ·{' '}
-                            {order.customer.address ?? 'Manzil yo‘q'}
-                          </p>
-
-                          <p className="mt-2 text-sm text-slate-600">
-                            {statusDescription[order.status]}
-                          </p>
-
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            {order.items.map((item) => (
                               <span
-                                key={item.id}
-                                className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
+                                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                  statusBadgeClass[order.status]
+                                }`}
                               >
-                                {item.productName} × {item.quantity}
+                                {statusShortLabels[order.status]}
                               </span>
-                            ))}
+                            </div>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                              {order.customer.phone ?? 'Telefon yo‘q'} ·{' '}
+                              {order.customer.address ?? 'Manzil yo‘q'}
+                            </p>
+
+                            <p className="mt-2 text-sm text-slate-600">
+                              {statusDescription[order.status]}
+                            </p>
+
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {order.items.map((item) => (
+                                <span
+                                  key={item.id}
+                                  className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
+                                >
+                                  {item.productName} × {item.quantity}
+                                </span>
+                              ))}
+                            </div>
                           </div>
 
-                          <div className="mt-4 grid gap-2 md:grid-cols-7">
-                            {statusFlow.map((status, index) => (
-                              <div
-                                key={status}
+                          <div className="w-full rounded-2xl bg-slate-50 p-4 text-sm lg:w-56 lg:shrink-0">
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Jami</span>
+                              <span className="font-bold text-slate-900">
+                                {formatMoney(order.totalAmount)}
+                              </span>
+                            </div>
+
+                            <div className="mt-2 flex justify-between">
+                              <span className="text-slate-500">Qarz</span>
+                              <span
                                 className={
-                                  index <= activeStatusIndex
-                                    ? 'rounded-xl bg-slate-900 px-2 py-2 text-center text-[11px] font-bold text-white'
-                                    : 'rounded-xl bg-slate-100 px-2 py-2 text-center text-[11px] font-semibold text-slate-500'
+                                  order.debtAmount > 0
+                                    ? 'font-bold text-red-600'
+                                    : 'font-bold text-emerald-600'
                                 }
                               >
-                                {statusShortLabels[status]}
-                              </div>
-                            ))}
+                                {formatMoney(order.debtAmount)}
+                              </span>
+                            </div>
+
+                            <div className="mt-4">
+                              {nextStatus ? (
+                                canUpdateStatus ? (
+                                  <button
+                                    onClick={() => updateOrderStatus(order)}
+                                    disabled={isUpdating}
+                                    className="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    {isUpdating ? (
+                                      <span className="flex items-center justify-center gap-2">
+                                        <LoadingSpinner />
+                                        Yangilanmoqda...
+                                      </span>
+                                    ) : (
+                                      statusLabels[order.status]
+                                    )}
+                                  </button>
+                                ) : (
+                                  <div className="rounded-xl bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-700">
+                                    Statusni mas’ul xodim o‘zgartiradi
+                                  </div>
+                                )
+                              ) : (
+                                <div className="rounded-xl bg-emerald-50 px-4 py-2 text-center text-sm font-semibold text-emerald-700">
+                                  Yakunlangan
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
-                        <div className="min-w-52 rounded-2xl bg-slate-50 p-4 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Jami</span>
-                            <span className="font-bold text-slate-900">
-                              {formatMoney(order.totalAmount)}
-                            </span>
-                          </div>
+                        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+                          <div className="overflow-x-auto pb-1">
+                            <div className="flex min-w-[720px] items-start">
+                              {statusFlow.map((status, index) => {
+                                const isCompleted = index < activeStatusIndex;
+                                const isCurrent = index === activeStatusIndex;
+                                const isActive = index <= activeStatusIndex;
 
-                          <div className="mt-2 flex justify-between">
-                            <span className="text-slate-500">Qarz</span>
-                            <span
-                              className={
-                                order.debtAmount > 0
-                                  ? 'font-bold text-red-600'
-                                  : 'font-bold text-emerald-600'
-                              }
-                            >
-                              {formatMoney(order.debtAmount)}
-                            </span>
-                          </div>
+                                return (
+                                  <div
+                                    key={status}
+                                    className="flex flex-1 items-start"
+                                  >
+                                    <div className="flex w-24 shrink-0 flex-col items-center">
+                                      <div
+                                        className={
+                                          isCurrent
+                                            ? 'flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white ring-4 ring-slate-100'
+                                            : isActive
+                                              ? 'flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white'
+                                              : 'flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-500'
+                                        }
+                                      >
+                                        {index + 1}
+                                      </div>
 
-                          <div className="mt-4">
-                            {nextStatus ? (
-                              canUpdateStatus ? (
-                                <button
-                                  onClick={() => updateOrderStatus(order)}
-                                  disabled={isUpdating}
-                                  className="w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                  {isUpdating ? (
-                                    <span className="flex items-center justify-center gap-2">
-                                      <LoadingSpinner />
-                                      Yangilanmoqda...
-                                    </span>
-                                  ) : (
-                                    statusLabels[order.status]
-                                  )}
-                                </button>
-                              ) : (
-                                <div className="rounded-xl bg-amber-50 px-4 py-2 text-center text-sm font-semibold text-amber-700">
-                                  Statusni mas’ul xodim o‘zgartiradi
-                                </div>
-                              )
-                            ) : (
-                              <div className="rounded-xl bg-emerald-50 px-4 py-2 text-center text-sm font-semibold text-emerald-700">
-                                Yakunlangan
-                              </div>
-                            )}
+                                      <span
+                                        className={
+                                          isActive
+                                            ? 'mt-2 text-center text-[11px] font-bold text-slate-900'
+                                            : 'mt-2 text-center text-[11px] font-semibold text-slate-400'
+                                        }
+                                      >
+                                        {statusShortLabels[status]}
+                                      </span>
+                                    </div>
+
+                                    {index < statusFlow.length - 1 ? (
+                                      <div
+                                        className={
+                                          isCompleted
+                                            ? 'mt-4 h-1 flex-1 rounded-full bg-slate-900'
+                                            : 'mt-4 h-1 flex-1 rounded-full bg-slate-200'
+                                        }
+                                      />
+                                    ) : null}
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
                         </div>
                       </div>
