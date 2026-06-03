@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { LoadingSpinner } from '@/components/loading-spinner';
@@ -56,18 +56,43 @@ export default function ProductsPage() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [form, setForm] = useState<ProductForm>(initialForm);
+
+  const [createForm, setCreateForm] = useState<ProductForm>(initialForm);
+  const [editForm, setEditForm] = useState<ProductForm>(initialForm);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [savingProductId, setSavingProductId] = useState<string | null>(null);
   const [updatingProductId, setUpdatingProductId] = useState<string | null>(
     null,
   );
+
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const canManage = canManageProducts(currentUser?.role);
+
+  const filteredProducts = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) return products;
+
+    return products.filter((product) => {
+      return (
+        product.name.toLowerCase().includes(query) ||
+        (product.sku ?? '').toLowerCase().includes(query) ||
+        product.unit.toLowerCase().includes(query)
+      );
+    });
+  }, [products, searchQuery]);
+
+  const activeProductsCount = useMemo(() => {
+    return products.filter((product) => product.isActive).length;
+  }, [products]);
 
   function getToken() {
     const token = localStorage.getItem('accessToken');
@@ -135,11 +160,32 @@ export default function ProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function updateForm(field: keyof ProductForm, value: string) {
-    setForm((current) => ({
+  function updateCreateForm(field: keyof ProductForm, value: string) {
+    setCreateForm((current) => ({
       ...current,
       [field]: value,
     }));
+  }
+
+  function updateEditForm(field: keyof ProductForm, value: string) {
+    setEditForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  }
+
+  function validateProductForm(form: ProductForm) {
+    if (!form.name.trim()) {
+      return 'Mahsulot nomi majburiy';
+    }
+
+    const price = Number(form.price);
+
+    if (!Number.isFinite(price) || price < 0) {
+      return 'Narx 0 yoki undan katta son bo‘lishi kerak';
+    }
+
+    return '';
   }
 
   async function createProduct(event: FormEvent<HTMLFormElement>) {
@@ -148,15 +194,10 @@ export default function ProductsPage() {
     setError('');
     setSuccessMessage('');
 
-    if (!form.name.trim()) {
-      setError('Mahsulot nomi majburiy');
-      return;
-    }
+    const validationError = validateProductForm(createForm);
 
-    const price = Number(form.price);
-
-    if (!Number.isFinite(price) || price < 0) {
-      setError('Narx 0 yoki undan katta son bo‘lishi kerak');
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
@@ -174,10 +215,10 @@ export default function ProductsPage() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            name: form.name.trim(),
-            sku: form.sku.trim() || undefined,
-            unit: form.unit.trim() || 'dona',
-            price,
+            name: createForm.name.trim(),
+            sku: createForm.sku.trim() || undefined,
+            unit: createForm.unit.trim() || 'dona',
+            price: Number(createForm.price),
           }),
         }),
         sleep(700),
@@ -195,14 +236,86 @@ export default function ProductsPage() {
         throw new Error('Mahsulot yaratishda xatolik');
       }
 
-      setForm(initialForm);
-      setSuccessMessage('Mahsulot muvaffaqiyatli qo‘shildi');
-
+      setCreateForm(initialForm);
+      setSuccessMessage('Mahsulot qo‘shildi');
       await loadProducts();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  function startEditing(product: Product) {
+    setError('');
+    setSuccessMessage('');
+    setEditingProductId(product.id);
+    setEditForm({
+      name: product.name,
+      sku: product.sku ?? '',
+      unit: product.unit,
+      price: String(product.price),
+    });
+  }
+
+  function cancelEditing() {
+    setEditingProductId(null);
+    setEditForm(initialForm);
+  }
+
+  async function saveProduct(product: Product) {
+    setError('');
+    setSuccessMessage('');
+
+    const validationError = validateProductForm(editForm);
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setSavingProductId(product.id);
+
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      const [response] = await Promise.all([
+        fetch(`${apiUrl}/products/${product.id}`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: editForm.name.trim(),
+            sku: editForm.sku.trim() || undefined,
+            unit: editForm.unit.trim() || 'dona',
+            price: Number(editForm.price),
+          }),
+        }),
+        sleep(700),
+      ]);
+
+      if (response.status === 403) {
+        throw new Error('Faqat OWNER yoki MANAGER mahsulotni tahrirlay oladi');
+      }
+
+      if (response.status === 409) {
+        throw new Error('Bu nomdagi mahsulot allaqachon mavjud');
+      }
+
+      if (!response.ok) {
+        throw new Error('Mahsulotni saqlashda xatolik');
+      }
+
+      setSuccessMessage('Mahsulot yangilandi');
+      cancelEditing();
+      await loadProducts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+    } finally {
+      setSavingProductId(null);
     }
   }
 
@@ -238,9 +351,9 @@ export default function ProductsPage() {
       }
 
       setSuccessMessage(
-        !product.isActive
-          ? 'Mahsulot aktiv qilindi'
-          : 'Mahsulot vaqtincha noaktiv qilindi',
+        product.isActive
+          ? 'Mahsulot noaktiv qilindi'
+          : 'Mahsulot aktiv qilindi',
       );
 
       await loadProducts();
@@ -258,12 +371,11 @@ export default function ProductsPage() {
           <div>
             <p className="text-sm font-medium text-slate-500">Products</p>
             <h1 className="mt-2 text-3xl font-bold text-slate-900">
-              Mahsulotlar bazasi
+              Mahsulotlar
             </h1>
             <p className="mt-2 max-w-2xl text-slate-600">
-              Zakazda mahsulot qo‘lda yozilmasligi uchun tayyor mahsulotlar
-              bazasini yuritamiz. Keyingi bosqichda Orders form shu bazadan
-              mahsulot tanlaydi.
+              Zakaz yaratishda mahsulotlar shu bazadan tanlanadi. Narx keyin
+              o‘zgarsa ham eski zakazlar snapshot orqali saqlanadi.
             </p>
           </div>
 
@@ -278,7 +390,7 @@ export default function ProductsPage() {
             <div className="rounded-2xl bg-white px-5 py-4 shadow-sm">
               <p className="text-sm text-slate-500">Aktiv</p>
               <p className="mt-1 text-2xl font-bold text-emerald-600">
-                {products.filter((product) => product.isActive).length}
+                {activeProductsCount}
               </p>
             </div>
           </div>
@@ -302,12 +414,12 @@ export default function ProductsPage() {
               Yangi mahsulot
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Mahsulot nomi va narxi keyinchalik zakazga avtomatik tushadi.
+              Mahsulotlar zakaz formida tanlanadi. Narxni backend saqlaydi.
             </p>
 
             {!canManage ? (
               <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-medium text-amber-700">
-                Mahsulot qo‘shish faqat OWNER yoki MANAGER uchun.
+                Mahsulot qo‘shish va tahrirlash faqat OWNER yoki MANAGER uchun.
               </div>
             ) : (
               <form onSubmit={createProduct} className="mt-5 space-y-4">
@@ -316,10 +428,12 @@ export default function ProductsPage() {
                     Mahsulot nomi *
                   </label>
                   <input
-                    value={form.name}
-                    onChange={(event) => updateForm('name', event.target.value)}
+                    value={createForm.name}
+                    onChange={(event) =>
+                      updateCreateForm('name', event.target.value)
+                    }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
-                    placeholder="Masalan: Fasad kraska 20L"
+                    placeholder="Masalan: Fasad kraska 20 L"
                   />
                 </div>
 
@@ -328,8 +442,10 @@ export default function ProductsPage() {
                     SKU / kod
                   </label>
                   <input
-                    value={form.sku}
-                    onChange={(event) => updateForm('sku', event.target.value)}
+                    value={createForm.sku}
+                    onChange={(event) =>
+                      updateCreateForm('sku', event.target.value)
+                    }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
                     placeholder="PAINT-FASAD-20L"
                   />
@@ -341,9 +457,9 @@ export default function ProductsPage() {
                       Birlik
                     </label>
                     <input
-                      value={form.unit}
+                      value={createForm.unit}
                       onChange={(event) =>
-                        updateForm('unit', event.target.value)
+                        updateCreateForm('unit', event.target.value)
                       }
                       className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
                       placeholder="dona"
@@ -355,12 +471,12 @@ export default function ProductsPage() {
                       Narx
                     </label>
                     <input
-                      value={form.price}
+                      value={createForm.price}
                       onChange={(event) =>
-                        updateForm('price', event.target.value)
+                        updateCreateForm('price', event.target.value)
                       }
                       className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
-                      placeholder="250000"
+                      placeholder="256000"
                     />
                   </div>
                 </div>
@@ -385,11 +501,41 @@ export default function ProductsPage() {
 
           <section className="rounded-2xl border border-slate-200 bg-white shadow-sm xl:col-span-2">
             <div className="border-b border-slate-200 p-6">
-              <h2 className="text-lg font-bold text-slate-900">
-                Mahsulotlar ro‘yxati
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Aktiv mahsulotlar keyinchalik zakaz formida tanlanadi.
+              <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">
+                    Mahsulotlar ro‘yxati
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Aktiv mahsulotlar order formida ko‘rinadi.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={loadProducts}
+                  disabled={isLoading}
+                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isLoading ? 'Yuklanmoqda...' : 'Yangilash'}
+                </button>
+              </div>
+
+              <div className="mt-5">
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm text-slate-900 outline-none focus:border-slate-900"
+                  placeholder="Mahsulot nomi, SKU yoki birlik bo‘yicha qidirish..."
+                />
+              </div>
+
+              <p className="mt-3 text-sm text-slate-500">
+                Ko‘rsatilmoqda:{' '}
+                <span className="font-bold text-slate-900">
+                  {filteredProducts.length}
+                </span>{' '}
+                / {products.length}
               </p>
             </div>
 
@@ -410,85 +556,185 @@ export default function ProductsPage() {
                   ))}
                 </div>
               </div>
-            ) : products.length === 0 ? (
+            ) : filteredProducts.length === 0 ? (
               <div className="p-6">
                 <div className="rounded-2xl bg-slate-50 p-6 text-center">
                   <p className="font-semibold text-slate-900">
-                    Hali mahsulot yo‘q
+                    Mahsulot topilmadi
                   </p>
                   <p className="mt-1 text-sm text-slate-500">
-                    Birinchi mahsulotni chapdagi formadan qo‘shing.
+                    Qidiruvni o‘zgartiring yoki yangi mahsulot qo‘shing.
                   </p>
                 </div>
               </div>
             ) : (
               <div className="divide-y divide-slate-100">
-                {products.map((product) => {
+                {filteredProducts.map((product) => {
+                  const isEditing = editingProductId === product.id;
+                  const isSaving = savingProductId === product.id;
                   const isUpdating = updatingProductId === product.id;
 
                   return (
                     <div
                       key={product.id}
-                      className={`flex flex-col gap-4 p-5 transition md:flex-row md:items-center md:justify-between ${
-                        isUpdating
+                      className={`p-5 transition ${
+                        isSaving || isUpdating
                           ? 'bg-slate-50 opacity-70'
                           : 'hover:bg-slate-50'
                       }`}
                     >
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="font-bold text-slate-900">
-                            {product.name}
-                          </h3>
+                      {isEditing ? (
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div>
+                              <label className="mb-2 block text-xs font-semibold text-slate-500">
+                                Mahsulot nomi
+                              </label>
+                              <input
+                                value={editForm.name}
+                                onChange={(event) =>
+                                  updateEditForm('name', event.target.value)
+                                }
+                                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
+                              />
+                            </div>
 
-                          <span
-                            className={
-                              product.isActive
-                                ? 'rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700'
-                                : 'rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500'
-                            }
-                          >
-                            {product.isActive ? 'Active' : 'Inactive'}
-                          </span>
+                            <div>
+                              <label className="mb-2 block text-xs font-semibold text-slate-500">
+                                SKU / kod
+                              </label>
+                              <input
+                                value={editForm.sku}
+                                onChange={(event) =>
+                                  updateEditForm('sku', event.target.value)
+                                }
+                                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-2 block text-xs font-semibold text-slate-500">
+                                Birlik
+                              </label>
+                              <input
+                                value={editForm.unit}
+                                onChange={(event) =>
+                                  updateEditForm('unit', event.target.value)
+                                }
+                                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-2 block text-xs font-semibold text-slate-500">
+                                Narx
+                              </label>
+                              <input
+                                value={editForm.price}
+                                onChange={(event) =>
+                                  updateEditForm('price', event.target.value)
+                                }
+                                className="w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="mt-4 flex flex-col gap-2 md:flex-row">
+                            <button
+                              type="button"
+                              onClick={() => saveProduct(product)}
+                              disabled={isSaving}
+                              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {isSaving ? (
+                                <span className="flex items-center justify-center gap-2">
+                                  <LoadingSpinner />
+                                  Saqlanmoqda...
+                                </span>
+                              ) : (
+                                'Saqlash'
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={cancelEditing}
+                              disabled={isSaving}
+                              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              Bekor qilish
+                            </button>
+                          </div>
                         </div>
+                      ) : (
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h3 className="font-bold text-slate-900">
+                                {product.name}
+                              </h3>
 
-                        <p className="mt-1 text-sm text-slate-500">
-                          {product.sku ?? 'SKU yo‘q'} · {product.unit}
-                        </p>
-
-                        <p className="mt-2 text-lg font-bold text-slate-900">
-                          {formatMoney(product.price)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        {canManage ? (
-                          <button
-                            onClick={() => toggleProductActive(product)}
-                            disabled={isUpdating}
-                            className={
-                              product.isActive
-                                ? 'rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60'
-                                : 'rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60'
-                            }
-                          >
-                            {isUpdating ? (
-                              <span className="flex items-center justify-center gap-2">
-                                <LoadingSpinner />
-                                Yangilanmoqda...
+                              <span
+                                className={
+                                  product.isActive
+                                    ? 'rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700'
+                                    : 'rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500'
+                                }
+                              >
+                                {product.isActive ? 'Aktiv' : 'Noaktiv'}
                               </span>
-                            ) : product.isActive ? (
-                              'Noaktiv qilish'
+                            </div>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                              {product.sku ?? 'SKU yo‘q'} · {product.unit}
+                            </p>
+
+                            <p className="mt-2 text-lg font-bold text-slate-900">
+                              {formatMoney(product.price)}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-col gap-2 md:w-44">
+                            {canManage ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => startEditing(product)}
+                                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                                >
+                                  Tahrirlash
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => toggleProductActive(product)}
+                                  disabled={isUpdating}
+                                  className={
+                                    product.isActive
+                                      ? 'rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60'
+                                      : 'rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60'
+                                  }
+                                >
+                                  {isUpdating ? (
+                                    <span className="flex items-center justify-center gap-2">
+                                      <LoadingSpinner />
+                                      Yangilanmoqda...
+                                    </span>
+                                  ) : product.isActive ? (
+                                    'Noaktiv qilish'
+                                  ) : (
+                                    'Aktiv qilish'
+                                  )}
+                                </button>
+                              </>
                             ) : (
-                              'Aktiv qilish'
+                              <span className="text-sm text-slate-400">
+                                Faqat ko‘rish
+                              </span>
                             )}
-                          </button>
-                        ) : (
-                          <span className="text-sm text-slate-400">
-                            Faqat ko‘rish
-                          </span>
-                        )}
-                      </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
