@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
@@ -85,6 +86,24 @@ const statusBadgeClass: Record<OrderStatus, string> = {
   PAID: 'bg-slate-900 text-white',
 };
 
+const quickActions = [
+  {
+    title: 'Yangi zakaz',
+    description: 'Mijoz va mahsulot tanlab zakaz yarating',
+    href: '/orders',
+  },
+  {
+    title: 'Mijoz qo‘shish',
+    description: 'Yangi do‘kon yoki xaridor kiriting',
+    href: '/customers',
+  },
+  {
+    title: 'Mahsulotlar',
+    description: 'Narx va aktiv mahsulotlarni boshqaring',
+    href: '/products',
+  },
+];
+
 function formatMoney(value: number) {
   return `${value.toLocaleString()} so‘m`;
 }
@@ -120,6 +139,18 @@ export default function DashboardPage() {
     const values = Array.from(statusCountMap.values());
     return Math.max(...values, 1);
   }, [statusCountMap]);
+
+  const debtRatio = useMemo(() => {
+    if (!summary || summary.totalSales <= 0) return 0;
+
+    return Math.round((summary.openDebt / summary.totalSales) * 100);
+  }, [summary]);
+
+  const paidAmount = useMemo(() => {
+    if (!summary) return 0;
+
+    return Math.max(summary.totalSales - summary.openDebt, 0);
+  }, [summary]);
 
   async function loadSummary() {
     setError('');
@@ -174,8 +205,8 @@ export default function DashboardPage() {
               Sales OS boshqaruv paneli
             </h1>
             <p className="mt-2 max-w-2xl text-slate-600">
-              Real savdo, qarz, zakaz statuslari va oxirgi buyurtmalar bir
-              joyda. Maqsad — direktor va manager vaziyatni tez tushunsin.
+              Savdo, qarz, zakaz statuslari va oxirgi buyurtmalar. Maqsad —
+              rahbar vaziyatni tez tushunsin.
             </p>
           </div>
 
@@ -242,13 +273,25 @@ export default function DashboardPage() {
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <p className="text-sm font-medium text-slate-500">
+                  To‘langan
+                </p>
+                <p className="mt-3 text-2xl font-bold text-emerald-600">
+                  {formatMoney(paidAmount)}
+                </p>
+                <p className="mt-2 text-sm text-slate-500">
+                  Jami savdodan qarz ayrilgani
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-sm font-medium text-slate-500">
                   Ochiq qarz
                 </p>
                 <p className="mt-3 text-2xl font-bold text-red-600">
                   {formatMoney(summary.openDebt)}
                 </p>
                 <p className="mt-2 text-sm text-slate-500">
-                  To‘lov kutilayotgan summa
+                  Qarzdorlik ulushi: {debtRatio}%
                 </p>
               </div>
 
@@ -263,22 +306,63 @@ export default function DashboardPage() {
                   Yangi: {summary.newOrdersCount}
                 </p>
               </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-sm font-medium text-slate-500">Mijozlar</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {summary.customersCount}
+                </p>
+              </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <p className="text-sm font-medium text-slate-500">
-                  Mijozlar / mahsulotlar
+                  Mahsulotlar
                 </p>
-                <p className="mt-3 text-2xl font-bold text-slate-900">
-                  {summary.customersCount} / {summary.productsCount}
+                <p className="mt-2 text-2xl font-bold text-slate-900">
+                  {summary.productsCount}
                 </p>
-                <p className="mt-2 text-sm text-slate-500">
-                  Aktiv mahsulotlar: {summary.activeProductsCount}
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p className="text-sm font-medium text-slate-500">
+                  Aktiv mahsulotlar
+                </p>
+                <p className="mt-2 text-2xl font-bold text-emerald-600">
+                  {summary.activeProductsCount}
                 </p>
               </div>
             </div>
 
             <div className="mt-6 grid gap-6 xl:grid-cols-3">
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-1">
+                <h2 className="text-lg font-bold text-slate-900">
+                  Tezkor amallar
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Eng ko‘p ishlatiladigan ishlar.
+                </p>
+
+                <div className="mt-5 space-y-3">
+                  {quickActions.map((action) => (
+                    <Link
+                      key={action.href}
+                      href={action.href}
+                      className="block rounded-2xl border border-slate-200 p-4 transition hover:border-slate-900 hover:bg-slate-50"
+                    >
+                      <p className="font-bold text-slate-900">
+                        {action.title}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">
+                        {action.description}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
                 <h2 className="text-lg font-bold text-slate-900">
                   Statuslar bo‘yicha
                 </h2>
@@ -289,7 +373,10 @@ export default function DashboardPage() {
                 <div className="mt-5 space-y-4">
                   {statusFlow.map((status) => {
                     const count = statusCountMap.get(status) ?? 0;
-                    const width = `${Math.max((count / maxStatusCount) * 100, count > 0 ? 8 : 0)}%`;
+                    const width = `${Math.max(
+                      (count / maxStatusCount) * 100,
+                      count > 0 ? 8 : 0,
+                    )}%`;
 
                     return (
                       <div key={status}>
@@ -311,92 +398,109 @@ export default function DashboardPage() {
                   })}
                 </div>
               </section>
+            </div>
 
-              <section className="rounded-2xl border border-slate-200 bg-white shadow-sm xl:col-span-2">
-                <div className="border-b border-slate-200 p-6">
-                  <h2 className="text-lg font-bold text-slate-900">
-                    Oxirgi zakazlar
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Eng so‘nggi 5 ta zakaz.
-                  </p>
-                </div>
-
-                {summary.recentOrders.length === 0 ? (
-                  <div className="p-6">
-                    <div className="rounded-2xl bg-slate-50 p-6 text-center">
-                      <p className="font-semibold text-slate-900">
-                        Hali zakaz yo‘q
-                      </p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        Birinchi zakaz yaratilganda shu yerda chiqadi.
-                      </p>
-                    </div>
+            <section className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-200 p-6">
+                <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Oxirgi zakazlar
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Eng so‘nggi 5 ta zakaz.
+                    </p>
                   </div>
-                ) : (
-                  <div className="divide-y divide-slate-100">
-                    {summary.recentOrders.map((order) => (
-                      <div key={order.id} className="p-5 hover:bg-slate-50">
-                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                          <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h3 className="font-bold text-slate-900">
-                                {order.customer.name}
-                              </h3>
 
-                              <span
-                                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-                                  statusBadgeClass[order.status]
-                                }`}
-                              >
-                                {order.status}
-                              </span>
-                            </div>
+                  <Link
+                    href="/orders"
+                    className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Barcha zakazlar
+                  </Link>
+                </div>
+              </div>
 
-                            <p className="mt-1 text-sm text-slate-500">
-                              {order.customer.phone ?? 'Telefon yo‘q'} ·{' '}
-                              {order.customer.address ?? 'Manzil yo‘q'}
-                            </p>
+              {summary.recentOrders.length === 0 ? (
+                <div className="p-6">
+                  <div className="rounded-2xl bg-slate-50 p-6 text-center">
+                    <p className="font-semibold text-slate-900">
+                      Hali zakaz yo‘q
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Birinchi zakaz yaratilganda shu yerda chiqadi.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {summary.recentOrders.map((order) => (
+                    <div key={order.id} className="p-5 hover:bg-slate-50">
+                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-bold text-slate-900">
+                              {order.customer.name}
+                            </h3>
 
-                            <p className="mt-1 text-sm text-slate-500">
-                              Yaratgan: {order.createdBy.fullName} ·{' '}
-                              {formatDate(order.createdAt)}
-                            </p>
-
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {order.items.map((item) => (
-                                <span
-                                  key={item.id}
-                                  className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
-                                >
-                                  {item.productName} × {item.quantity}
-                                </span>
-                              ))}
-                            </div>
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                statusBadgeClass[order.status]
+                              }`}
+                            >
+                              {statusLabels[order.status]}
+                            </span>
                           </div>
 
-                          <div className="min-w-48 rounded-2xl bg-slate-50 p-4 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-slate-500">Jami</span>
-                              <span className="font-bold text-slate-900">
-                                {formatMoney(order.totalAmount)}
-                              </span>
-                            </div>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {order.customer.phone ?? 'Telefon yo‘q'} ·{' '}
+                            {order.customer.address ?? 'Manzil yo‘q'}
+                          </p>
 
-                            <div className="mt-2 flex justify-between">
-                              <span className="text-slate-500">Qarz</span>
-                              <span className="font-bold text-red-600">
-                                {formatMoney(order.debtAmount)}
+                          <p className="mt-1 text-sm text-slate-500">
+                            Yaratgan: {order.createdBy.fullName} ·{' '}
+                            {formatDate(order.createdAt)}
+                          </p>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {order.items.map((item) => (
+                              <span
+                                key={item.id}
+                                className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600"
+                              >
+                                {item.productName} × {item.quantity}
                               </span>
-                            </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="w-full rounded-2xl bg-slate-50 p-4 text-sm md:w-56 md:shrink-0">
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Jami</span>
+                            <span className="font-bold text-slate-900">
+                              {formatMoney(order.totalAmount)}
+                            </span>
+                          </div>
+
+                          <div className="mt-2 flex justify-between">
+                            <span className="text-slate-500">Qarz</span>
+                            <span
+                              className={
+                                order.debtAmount > 0
+                                  ? 'font-bold text-red-600'
+                                  : 'font-bold text-emerald-600'
+                              }
+                            >
+                              {formatMoney(order.debtAmount)}
+                            </span>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </>
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 text-slate-500 shadow-sm">
