@@ -1,37 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sales OS Web
 
-## Getting Started
+Admin web app for Sales OS.
 
-First, run the development server:
+Stack:
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Local web URL:
+http://localhost:3001
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Backend URL:
+http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Start web:
+cd ~/Documents/sales-os/web
+npm install
+npm run dev -- -p 3001
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Environment file:
+.env.local
 
-## Learn More
+Required env:
+NEXT_PUBLIC_API_URL="http://localhost:3000"
 
-To learn more about Next.js, take a look at the following resources:
+Test users:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+OWNER:
++998901112233
+123456
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+SALES:
++998901234567
+123456
 
-## Deploy on Vercel
+Main pages:
+- /login
+- /dashboard
+- /orders
+- /products
+- /customers
+- /employees
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Smoke checklist:
+docs/WEB_SMOKE_TEST.md
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# sales-os-web
+Before changing UI:
+1. Check that backend is running.
+2. Check that .env.local points to backend.
+3. Test OWNER login.
+4. Test SALES login.
+5. Test order creation.
+6. Run through docs/WEB_SMOKE_TEST.md.
