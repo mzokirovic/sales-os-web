@@ -108,8 +108,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <aside
           className={
             isSidebarCollapsed
-              ? 'hidden w-16 shrink-0 border-r border-slate-200 bg-white px-3 py-4 transition-all md:block'
-              : 'hidden w-72 shrink-0 border-r border-slate-200 bg-white p-5 transition-all md:block'
+              ? 'sticky top-0 hidden h-screen w-16 shrink-0 self-start overflow-y-auto border-r border-slate-200 bg-white px-3 py-4 transition-all md:block'
+              : 'sticky top-0 hidden h-screen w-72 shrink-0 self-start overflow-y-auto border-r border-slate-200 bg-white p-5 transition-all md:block'
           }
         >
           <div
@@ -180,7 +180,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </aside>
 
         <section className="min-w-0 flex-1">
-          <header className="border-b border-slate-200 bg-white px-4 py-4 md:px-6">
+          <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 px-4 py-4 backdrop-blur md:px-6">
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
                 <button
