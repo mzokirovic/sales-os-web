@@ -373,10 +373,6 @@ export default function ProductsPage() {
             <h1 className="mt-2 text-3xl font-bold text-slate-900">
               Mahsulotlar
             </h1>
-            <p className="mt-2 max-w-2xl text-slate-600">
-              Zakaz yaratishda mahsulotlar shu bazadan tanlanadi. Narx keyin
-              o‘zgarsa ham eski zakazlar snapshot orqali saqlanadi.
-            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -413,13 +409,10 @@ export default function ProductsPage() {
             <h2 className="text-lg font-bold text-slate-900">
               Yangi mahsulot
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Mahsulotlar zakaz formida tanlanadi. Narxni backend saqlaydi.
-            </p>
 
             {!canManage ? (
               <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-medium text-amber-700">
-                Mahsulot qo‘shish va tahrirlash faqat OWNER yoki MANAGER uchun.
+                Faqat OWNER yoki MANAGER tahrirlay oladi.
               </div>
             ) : (
               <form onSubmit={createProduct} className="mt-5 space-y-4">
@@ -506,9 +499,6 @@ export default function ProductsPage() {
                   <h2 className="text-lg font-bold text-slate-900">
                     Mahsulotlar ro‘yxati
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Aktiv mahsulotlar order formida ko‘rinadi.
-                  </p>
                 </div>
 
                 <button
