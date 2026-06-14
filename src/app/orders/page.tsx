@@ -119,6 +119,7 @@ export default function OrdersPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -277,8 +278,8 @@ export default function OrdersPage() {
     if (!isCreateOpen) return;
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !isCreating) {
-        setIsCreateOpen(false);
+      if (event.key === 'Escape') {
+        closeCreateModal();
       }
     }
 
@@ -354,12 +355,13 @@ export default function OrdersPage() {
     event.preventDefault();
 
     setError('');
+    setFormError('');
     setSuccessMessage('');
 
     const validationError = validateOrder();
 
     if (validationError) {
-      setError(validationError);
+      setFormError(validationError);
       return;
     }
 
@@ -398,15 +400,30 @@ export default function OrdersPage() {
 
       setItems(initialItems);
       setPaidAmount('0');
+      setFormError('');
       setIsCreateOpen(false);
       setSuccessMessage('Zakaz yaratildi');
 
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setFormError(err instanceof Error ? err.message : 'Noma’lum xatolik');
     } finally {
       setIsCreating(false);
     }
+  }
+
+  function openCreateModal() {
+    setError('');
+    setFormError('');
+    setSuccessMessage('');
+    setIsCreateOpen(true);
+  }
+
+  function closeCreateModal() {
+    if (isCreating) return;
+
+    setFormError('');
+    setIsCreateOpen(false);
   }
 
   function resetFilters() {
@@ -429,7 +446,7 @@ export default function OrdersPage() {
           <div className="flex flex-col gap-3 sm:items-end">
             <button
               type="button"
-              onClick={() => setIsCreateOpen(true)}
+              onClick={openCreateModal}
               className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
             >
               + Yangi zakaz
@@ -469,11 +486,7 @@ export default function OrdersPage() {
           {isCreateOpen ? (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 px-4 py-6 backdrop-blur-sm"
-              onClick={() => {
-                if (!isCreating) {
-                  setIsCreateOpen(false);
-                }
-              }}
+              onClick={closeCreateModal}
             >
               <div
                 className="w-full max-w-xl"
@@ -487,13 +500,19 @@ export default function OrdersPage() {
 
                     <button
                       type="button"
-                      onClick={() => setIsCreateOpen(false)}
+                      onClick={closeCreateModal}
                       disabled={isCreating}
                       className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Yopish
                     </button>
                   </div>
+
+                  {formError ? (
+                    <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                      {formError}
+                    </div>
+                  ) : null}
 
                   <form onSubmit={createOrder} className="space-y-4">
               <div>
