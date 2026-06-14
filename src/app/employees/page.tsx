@@ -100,8 +100,10 @@ export default function EmployeesPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -208,6 +210,37 @@ export default function EmployeesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!isCreateOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !isCreating) {
+        setFormError('');
+        setIsCreateOpen(false);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isCreateOpen, isCreating]);
+
+  function openCreateModal() {
+    setError('');
+    setFormError('');
+    setSuccessMessage('');
+    setIsCreateOpen(true);
+  }
+
+  function closeCreateModal() {
+    if (isCreating) return;
+
+    setFormError('');
+    setIsCreateOpen(false);
+  }
+
   function updateForm(field: keyof EmployeeForm, value: string) {
     setForm((current) => ({
       ...current,
@@ -235,12 +268,13 @@ export default function EmployeesPage() {
     event.preventDefault();
 
     setError('');
+    setFormError('');
     setSuccessMessage('');
 
     const validationError = validateForm();
 
     if (validationError) {
-      setError(validationError);
+      setFormError(validationError);
       return;
     }
 
@@ -280,10 +314,13 @@ export default function EmployeesPage() {
       }
 
       setForm(initialForm);
+      setFormError('');
+      setIsCreateOpen(false);
       setSuccessMessage('Xodim qo‘shildi');
+
       await loadEmployees();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setFormError(err instanceof Error ? err.message : 'Noma’lum xatolik');
     } finally {
       setIsCreating(false);
     }
@@ -334,17 +371,51 @@ export default function EmployeesPage() {
           </div>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-3">
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-1">
-            <h2 className="text-lg font-bold text-slate-900">Yangi xodim</h2>
+                {canManage ? (
+          <div className="mb-6 flex justify-end">
+            <button
+              type="button"
+              onClick={openCreateModal}
+              className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+            >
+              + Yangi xodim
+            </button>
+          </div>
+        ) : null}
 
-            {!canManage ? (
-              <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-medium text-amber-700">
-                Xodim qo‘shish faqat OWNER uchun. Sizning rolingiz:{' '}
-                {currentUser ? roleLabels[currentUser.role] : 'noma’lum'}.
-              </div>
-            ) : (
-              <form onSubmit={createEmployee} className="mt-5 space-y-4">
+        <div className="grid gap-6">
+          {isCreateOpen ? (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 px-4 py-6 backdrop-blur-sm"
+              onClick={closeCreateModal}
+            >
+              <div
+                className="w-full max-w-xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <section className="max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl transition">
+                  <div className="mb-5 flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Yangi xodim
+                    </h2>
+
+                    <button
+                      type="button"
+                      onClick={closeCreateModal}
+                      disabled={isCreating}
+                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Yopish
+                    </button>
+                  </div>
+
+                  {formError ? (
+                    <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                      {formError}
+                    </div>
+                  ) : null}
+
+                <form onSubmit={createEmployee} className="space-y-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
                     Xodim ismi *
@@ -420,10 +491,12 @@ export default function EmployeesPage() {
                   )}
                 </button>
               </form>
-            )}
-          </section>
+                </section>
+              </div>
+            </div>
+          ) : null}
 
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm xl:col-span-2">
+          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 p-6">
               <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
                 <div>
