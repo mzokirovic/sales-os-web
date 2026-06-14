@@ -303,10 +303,6 @@ export default function EmployeesPage() {
             <h1 className="mt-2 text-3xl font-bold text-slate-900">
               Xodimlar
             </h1>
-            <p className="mt-2 max-w-2xl text-slate-600">
-              Har bir xodimning roli aniq bo‘lishi kerak. Role orqali kim
-              mijoz qo‘shishi, kim zakaz statusini yuritishi nazorat qilinadi.
-            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -341,9 +337,6 @@ export default function EmployeesPage() {
         <div className="grid gap-6 xl:grid-cols-3">
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-1">
             <h2 className="text-lg font-bold text-slate-900">Yangi xodim</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              MVP’da xodim yaratish oddiy: ism, telefon, parol va role.
-            </p>
 
             {!canManage ? (
               <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-medium text-amber-700">
@@ -390,9 +383,6 @@ export default function EmployeesPage() {
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
                     placeholder="123456"
                   />
-                  <p className="mt-2 text-xs text-slate-500">
-                    Keyin alohida parol almashtirish flow qo‘shamiz.
-                  </p>
                 </div>
 
                 <div>
@@ -413,9 +403,6 @@ export default function EmployeesPage() {
                     ))}
                   </select>
 
-                  <p className="mt-2 text-xs text-slate-500">
-                    {roleDescriptions[form.role]}
-                  </p>
                 </div>
 
                 <button
@@ -443,10 +430,6 @@ export default function EmployeesPage() {
                   <h2 className="text-lg font-bold text-slate-900">
                     Xodimlar ro‘yxati
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Rollar real jarayonni boshqaradi: sotuv, operator, sklad,
-                    yetkazish.
-                  </p>
                 </div>
 
                 <button
@@ -556,9 +539,6 @@ export default function EmployeesPage() {
                           {employee.phone}
                         </p>
 
-                        <p className="mt-2 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                          {roleDescriptions[employee.role]}
-                        </p>
                       </div>
 
                       <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm md:min-w-40">
