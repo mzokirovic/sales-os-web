@@ -232,22 +232,17 @@ export default function OrderDetailPage() {
         <div className="mb-6">
           <Link
             href="/orders"
-            className="text-sm font-semibold text-slate-600 hover:text-slate-900"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
           >
-            ← Zakazlarga qaytish
+            <span className="text-lg leading-none">←</span>
+            <span>Zakazlar</span>
           </Link>
 
           <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <p className="text-sm font-medium text-slate-500">
-                Order detail
-              </p>
               <h1 className="mt-2 text-3xl font-bold text-slate-900">
                 Zakaz tafsilotlari
               </h1>
-              <p className="mt-2 text-slate-600">
-                Bitta zakaz bo‘yicha mijoz, mahsulotlar, summa va status.
-              </p>
             </div>
 
             <button
