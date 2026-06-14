@@ -39,8 +39,14 @@ const initialForm: ProductForm = {
   price: '',
 };
 
-function formatMoney(value: number) {
-  return `${value.toLocaleString()} so‘m`;
+function formatMoney(value?: number | null) {
+  const amount = Number(value ?? 0);
+
+  if (!Number.isFinite(amount)) {
+    return "0 so‘m";
+  }
+
+  return `${amount.toLocaleString()} so‘m`;
 }
 
 function sleep(ms: number) {
@@ -65,12 +71,14 @@ export default function ProductsPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [savingProductId, setSavingProductId] = useState<string | null>(null);
   const [updatingProductId, setUpdatingProductId] = useState<string | null>(
     null,
   );
 
   const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -160,6 +168,37 @@ export default function ProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!isCreateOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !isCreating) {
+        setFormError('');
+        setIsCreateOpen(false);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isCreateOpen, isCreating]);
+
+  function openCreateModal() {
+    setError('');
+    setFormError('');
+    setSuccessMessage('');
+    setIsCreateOpen(true);
+  }
+
+  function closeCreateModal() {
+    if (isCreating) return;
+
+    setFormError('');
+    setIsCreateOpen(false);
+  }
+
   function updateCreateForm(field: keyof ProductForm, value: string) {
     setCreateForm((current) => ({
       ...current,
@@ -192,12 +231,13 @@ export default function ProductsPage() {
     event.preventDefault();
 
     setError('');
+    setFormError('');
     setSuccessMessage('');
 
     const validationError = validateProductForm(createForm);
 
     if (validationError) {
-      setError(validationError);
+      setFormError(validationError);
       return;
     }
 
@@ -237,10 +277,13 @@ export default function ProductsPage() {
       }
 
       setCreateForm(initialForm);
+      setFormError('');
+      setIsCreateOpen(false);
       setSuccessMessage('Mahsulot qo‘shildi');
+
       await loadProducts();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setFormError(err instanceof Error ? err.message : 'Noma’lum xatolik');
     } finally {
       setIsCreating(false);
     }
@@ -375,19 +418,31 @@ export default function ProductsPage() {
             </h1>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-white px-5 py-4 shadow-sm">
-              <p className="text-sm text-slate-500">Jami</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">
-                {products.length}
-              </p>
-            </div>
+          <div className="flex flex-col gap-3 sm:items-end">
+            {canManage ? (
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+              >
+                + Yangi mahsulot
+              </button>
+            ) : null}
 
-            <div className="rounded-2xl bg-white px-5 py-4 shadow-sm">
-              <p className="text-sm text-slate-500">Aktiv</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-600">
-                {activeProductsCount}
-              </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-2xl bg-white px-5 py-4 shadow-sm">
+                <p className="text-sm text-slate-500">Jami</p>
+                <p className="mt-1 text-2xl font-bold text-slate-900">
+                  {products.length}
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white px-5 py-4 shadow-sm">
+                <p className="text-sm text-slate-500">Aktiv</p>
+                <p className="mt-1 text-2xl font-bold text-emerald-600">
+                  {activeProductsCount}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -404,18 +459,39 @@ export default function ProductsPage() {
           </div>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-3">
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-1">
-            <h2 className="text-lg font-bold text-slate-900">
-              Yangi mahsulot
-            </h2>
+        <div className="grid gap-6">
+          {isCreateOpen ? (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/40 px-4 py-6 backdrop-blur-sm"
+              onClick={closeCreateModal}
+            >
+              <div
+                className="w-full max-w-xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <section className="max-h-[90vh] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl transition">
+                  <div className="mb-5 flex items-center justify-between gap-3">
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Yangi mahsulot
+                    </h2>
 
-            {!canManage ? (
-              <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-medium text-amber-700">
-                Faqat OWNER yoki MANAGER tahrirlay oladi.
-              </div>
-            ) : (
-              <form onSubmit={createProduct} className="mt-5 space-y-4">
+                    <button
+                      type="button"
+                      onClick={closeCreateModal}
+                      disabled={isCreating}
+                      className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Yopish
+                    </button>
+                  </div>
+
+                  {formError ? (
+                    <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                      {formError}
+                    </div>
+                  ) : null}
+
+                <form onSubmit={createProduct} className="space-y-4">
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
                     Mahsulot nomi *
@@ -489,10 +565,12 @@ export default function ProductsPage() {
                   )}
                 </button>
               </form>
-            )}
-          </section>
+                </section>
+              </div>
+            </div>
+          ) : null}
 
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm xl:col-span-2">
+          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 p-6">
               <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
                 <div>
