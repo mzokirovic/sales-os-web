@@ -86,23 +86,6 @@ const statusBadgeClass: Record<OrderStatus, string> = {
   PAID: 'bg-slate-900 text-white',
 };
 
-const quickActions = [
-  {
-    title: 'Yangi zakaz',
-    description: 'Mijoz va mahsulot tanlab zakaz yarating',
-    href: '/orders',
-  },
-  {
-    title: 'Mijoz qo‘shish',
-    description: 'Yangi do‘kon yoki xaridor kiriting',
-    href: '/customers',
-  },
-  {
-    title: 'Mahsulotlar',
-    description: 'Narx va aktiv mahsulotlarni boshqaring',
-    href: '/products',
-  },
-];
 
 function formatMoney(value: number) {
   return `${value.toLocaleString()} so‘m`;
@@ -204,10 +187,6 @@ export default function DashboardPage() {
             <h1 className="mt-2 text-3xl font-bold text-slate-900">
               Sales OS boshqaruv paneli
             </h1>
-            <p className="mt-2 max-w-2xl text-slate-600">
-              Savdo, qarz, zakaz statuslari va oxirgi buyurtmalar. Maqsad —
-              rahbar vaziyatni tez tushunsin.
-            </p>
           </div>
 
           <button
@@ -335,41 +314,11 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-6 grid gap-6 xl:grid-cols-3">
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-1">
-                <h2 className="text-lg font-bold text-slate-900">
-                  Tezkor amallar
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Eng ko‘p ishlatiladigan ishlar.
-                </p>
-
-                <div className="mt-5 space-y-3">
-                  {quickActions.map((action) => (
-                    <Link
-                      key={action.href}
-                      href={action.href}
-                      className="block rounded-2xl border border-slate-200 p-4 transition hover:border-slate-900 hover:bg-slate-50"
-                    >
-                      <p className="font-bold text-slate-900">
-                        {action.title}
-                      </p>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {action.description}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:col-span-2">
+            <div className="mt-6">
+<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-bold text-slate-900">
                   Statuslar bo‘yicha
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  Zakazlar qaysi bosqichda turganini ko‘rsatadi.
-                </p>
-
                 <div className="mt-5 space-y-4">
                   {statusFlow.map((status) => {
                     const count = statusCountMap.get(status) ?? 0;
