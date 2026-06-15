@@ -492,7 +492,7 @@ export default function OrderDetailPage() {
 
         {isLoading ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-10 shadow-sm">
-            <LoadingSpinner label="Zakaz yuklanmoqda..." />
+            <LoadingSpinner />
           </div>
         ) : !order ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
