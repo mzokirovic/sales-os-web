@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { LoadingSpinner } from '@/components/loading-spinner';
+import { canManageEmployees } from '@/lib/access';
 
 type Role = 'OWNER' | 'MANAGER' | 'SALES' | 'OPERATOR' | 'WAREHOUSE' | 'DELIVERY';
 
@@ -82,10 +83,6 @@ function sleep(ms: number) {
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString();
-}
-
-function canManageEmployees(role?: string | null) {
-  return role === 'OWNER';
 }
 
 export default function EmployeesPage() {

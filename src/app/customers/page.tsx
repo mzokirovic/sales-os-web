@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { LoadingSpinner } from '@/components/loading-spinner';
+import { canCreateCustomer } from '@/lib/access';
 
 type Customer = {
   id: string;
@@ -41,10 +42,6 @@ const initialForm: CustomerForm = {
   note: '',
 };
 
-function canCreateCustomers(role?: string | null) {
-  return role === 'OWNER' || role === 'MANAGER' || role === 'SALES';
-}
-
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString();
 }
@@ -71,7 +68,7 @@ export default function CustomersPage() {
   const [successMessage, setSuccessMessage] = useState('');
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  const canCreate = canCreateCustomers(currentUser?.role);
+  const canCreate = canCreateCustomer(currentUser?.role);
 
   const filteredCustomers = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();

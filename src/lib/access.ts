@@ -64,7 +64,7 @@ export function canManageProducts(role: string | null | undefined) {
 }
 
 export function canManageEmployees(role: string | null | undefined) {
-  return role === 'OWNER' || role === 'MANAGER';
+  return role === 'OWNER';
 }
 
 export function canUpdateOrderStatus(role: string | null | undefined) {

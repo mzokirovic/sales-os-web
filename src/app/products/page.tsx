@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { LoadingSpinner } from '@/components/loading-spinner';
+import { canManageProducts } from '@/lib/access';
 
 type Product = {
   id: string;
@@ -51,10 +52,6 @@ function formatMoney(value?: number | null) {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function canManageProducts(role?: string | null) {
-  return role === 'OWNER' || role === 'MANAGER';
 }
 
 export default function ProductsPage() {
