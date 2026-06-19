@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
+import {
+  canAddPayment as canRoleAddPayment,
+  fulfillmentStatusFlow,
+  nextStatusForRole,
+} from '@/lib/access';
 import { LoadingSpinner } from '@/components/loading-spinner';
 
 type OrderStatus =
@@ -69,15 +74,6 @@ type User = {
   phone: string;
   role: string;
 };
-
-const statusFlow: OrderStatus[] = [
-  'NEW',
-  'CHECKED',
-  'CONFIRMED',
-  'PREPARING',
-  'SHIPPED',
-  'DELIVERED',
-];
 
 const statusLabels: Record<OrderStatus, string> = {
   NEW: 'Yangi',
@@ -154,21 +150,21 @@ function formatDate(value?: string | null) {
 }
 
 function getNextStatus(status: OrderStatus) {
-  const currentIndex = statusFlow.indexOf(status);
+  const currentIndex = fulfillmentStatusFlow.indexOf(status);
 
-  if (currentIndex < 0 || currentIndex >= statusFlow.length - 1) {
+  if (currentIndex < 0 || currentIndex >= fulfillmentStatusFlow.length - 1) {
     return null;
   }
 
-  return statusFlow[currentIndex + 1];
+  return fulfillmentStatusFlow[currentIndex + 1];
 }
 
 function getActiveStatusIndex(status: OrderStatus) {
   if (status === 'PAID') {
-    return statusFlow.length - 1;
+    return fulfillmentStatusFlow.length - 1;
   }
 
-  const index = statusFlow.indexOf(status);
+  const index = fulfillmentStatusFlow.indexOf(status);
 
   return index < 0 ? 0 : index;
 }
@@ -183,10 +179,6 @@ function getPaymentStatus(order: Order): PaymentStatus {
   if (debtAmount <= 0) return 'PAID';
 
   return 'PARTIAL';
-}
-
-function canAddPayment(role?: string | null) {
-  return ['OWNER', 'MANAGER', 'SALES', 'OPERATOR'].includes(role ?? '');
 }
 
 function sleep(ms: number) {
@@ -219,8 +211,8 @@ export default function OrderDetailPage() {
   const nextStatus = useMemo(() => {
     if (!order) return null;
 
-    return getNextStatus(order.status);
-  }, [order]);
+    return nextStatusForRole(currentUser?.role, order.status);
+  }, [order, currentUser?.role]);
 
   const activeStatusIndex = useMemo(() => {
     if (!order) return 0;
@@ -234,7 +226,7 @@ export default function OrderDetailPage() {
     return getPaymentStatus(order);
   }, [order]);
 
-  const canUserAddPayment = canAddPayment(currentUser?.role);
+  const canUserAddPayment = canRoleAddPayment(currentUser?.role);
   const hasDebt = Number(order?.debtAmount ?? 0) > 0;
 
   function getToken() {
@@ -573,7 +565,7 @@ export default function OrderDetailPage() {
 
                 <div className="mt-6 overflow-x-auto pb-2">
                   <div className="flex min-w-max items-center gap-2">
-                    {statusFlow.map((status, index) => {
+                    {fulfillmentStatusFlow.map((status, index) => {
                       const isDone = index <= activeStatusIndex;
 
                       return (
@@ -588,7 +580,7 @@ export default function OrderDetailPage() {
                             {statusLabels[status]}
                           </div>
 
-                          {index < statusFlow.length - 1 && (
+                          {index < fulfillmentStatusFlow.length - 1 && (
                             <div
                               className={`h-0.5 w-8 ${
                                 isDone ? 'bg-slate-900' : 'bg-slate-200'

@@ -15,6 +15,17 @@ export type OrderStatus =
   | 'DELIVERED'
   | 'PAID';
 
+export type PaymentStatus = 'UNPAID' | 'PARTIAL' | 'PAID';
+
+export const fulfillmentStatusFlow: OrderStatus[] = [
+  'NEW',
+  'CHECKED',
+  'CONFIRMED',
+  'PREPARING',
+  'SHIPPED',
+  'DELIVERED',
+];
+
 export function isRole(value: string | null | undefined): value is Role {
   return (
     value === 'OWNER' ||
@@ -24,10 +35,6 @@ export function isRole(value: string | null | undefined): value is Role {
     value === 'WAREHOUSE' ||
     value === 'DELIVERY'
   );
-}
-
-export function canViewDashboard(role: string | null | undefined) {
-  return isRole(role);
 }
 
 export function canCreateCustomer(role: string | null | undefined) {
@@ -84,27 +91,24 @@ export function nextStatusForRole(
     return nextStatus;
   }
 
-  const allowedByRole: Partial<Record<Role, OrderStatus[]>> = {
-    OPERATOR: ['CHECKED', 'CONFIRMED'],
-    WAREHOUSE: ['PREPARING', 'SHIPPED'],
-    DELIVERY: ['DELIVERED'],
-  };
+  if (role === 'OPERATOR') {
+    return nextStatus === 'CHECKED' || nextStatus === 'CONFIRMED'
+      ? nextStatus
+      : null;
+  }
 
-  if (!isRole(role)) return null;
+  if (role === 'WAREHOUSE') {
+    return nextStatus === 'PREPARING' || nextStatus === 'SHIPPED'
+      ? nextStatus
+      : null;
+  }
 
-  const allowedStatuses = allowedByRole[role] ?? [];
+  if (role === 'DELIVERY') {
+    return nextStatus === 'DELIVERED' ? nextStatus : null;
+  }
 
-  return allowedStatuses.includes(nextStatus) ? nextStatus : null;
+  return null;
 }
-
-export const fulfillmentStatusFlow: OrderStatus[] = [
-  'NEW',
-  'CHECKED',
-  'CONFIRMED',
-  'PREPARING',
-  'SHIPPED',
-  'DELIVERED',
-];
 
 function getNextFulfillmentStatus(currentStatus: OrderStatus) {
   const index = fulfillmentStatusFlow.indexOf(currentStatus);
