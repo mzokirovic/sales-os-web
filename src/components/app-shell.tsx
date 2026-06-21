@@ -86,7 +86,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     const savedSidebarState = localStorage.getItem(SIDEBAR_STORAGE_KEY);
     setIsSidebarCollapsed(savedSidebarState === "true");
-  }, [router]);
+  }, [pathname, router]);
 
   function logout() {
     localStorage.removeItem("accessToken");

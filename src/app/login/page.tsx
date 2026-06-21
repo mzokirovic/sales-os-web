@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type LoginResponse = {
   accessToken: string;
@@ -17,24 +17,24 @@ type LoginResponse = {
 export default function LoginPage() {
   const router = useRouter();
 
-  const [phone, setPhone] = useState('+998901112233');
-  const [password, setPassword] = useState('123456');
-  const [error, setError] = useState('');
+  const [phone, setPhone] = useState("+998901112233");
+  const [password, setPassword] = useState("123456");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
       const response = await fetch(`${apiUrl}/auth/login`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           phone,
@@ -43,17 +43,22 @@ export default function LoginPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Telefon yoki parol noto‘g‘ri');
+        throw new Error("Telefon yoki parol noto‘g‘ri");
       }
 
       const data = (await response.json()) as LoginResponse;
 
-      localStorage.setItem('accessToken', data.accessToken);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("user", JSON.stringify(data.user));
 
-      router.push('/dashboard');
+      if (data.user.role === "DELIVERY") {
+        router.push("/driver-only");
+        return;
+      }
+
+      router.push("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login xatosi');
+      setError(err instanceof Error ? err.message : "Login xatosi");
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +114,7 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoading ? 'Kirilmoqda...' : 'Kirish'}
+            {isLoading ? "Kirilmoqda..." : "Kirish"}
           </button>
         </form>
       </div>
