@@ -16,6 +16,7 @@ type NavItem = {
   label: string;
   shortLabel: string;
   href: string;
+  roles?: string[];
 };
 
 const navItems: NavItem[] = [
@@ -38,6 +39,12 @@ const navItems: NavItem[] = [
     label: 'Orders',
     shortLabel: 'O',
     href: '/orders',
+  },
+  {
+    label: 'Delivery',
+    shortLabel: 'R',
+    href: '/delivery',
+    roles: ['OWNER', 'MANAGER', 'OPERATOR', 'WAREHOUSE'],
   },
   {
     label: 'Employees',
@@ -141,7 +148,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
 
           <nav className="space-y-2">
-            {navItems.map((item) => {
+            {navItems
+              .filter((item) => !item.roles || item.roles.includes(user.role))
+              .map((item) => {
               const isActive =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
 
