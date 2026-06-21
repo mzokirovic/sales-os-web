@@ -1,24 +1,24 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { AppShell } from '@/components/app-shell';
-import { LoadingSpinner } from '@/components/loading-spinner';
+import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { AppShell } from "@/components/app-shell";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
-type DriverAvailability = 'AVAILABLE' | 'PLANNED' | 'BUSY';
+type DriverAvailability = "AVAILABLE" | "PLANNED" | "BUSY";
 
 type Driver = {
   id: string;
   fullName: string;
   phone: string;
-  role: 'DELIVERY';
+  role: "DELIVERY";
   availability: DriverAvailability;
   activeStopsCount: number;
 };
 
 type ReadyOrder = {
   id: string;
-  status: 'PREPARING';
+  status: "PREPARING";
   totalAmount: number;
   createdAt: string;
   customer: {
@@ -38,7 +38,7 @@ type ReadyOrder = {
 
 type ActiveTrip = {
   id: string;
-  status: 'PLANNED' | 'IN_PROGRESS';
+  status: "PLANNED" | "IN_PROGRESS";
   startedAt: string | null;
   completedAt: string | null;
   createdAt: string;
@@ -46,12 +46,12 @@ type ActiveTrip = {
     id: string;
     fullName: string;
     phone: string;
-    role: 'DELIVERY';
+    role: "DELIVERY";
   };
   stops: {
     id: string;
     sortOrder: number;
-    status: 'PENDING' | 'DELIVERED' | 'FAILED';
+    status: "PENDING" | "DELIVERED" | "FAILED";
     deliveredAt: string | null;
     order: {
       id: string;
@@ -73,42 +73,42 @@ type ActiveTrip = {
   }[];
 };
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
 
 const availabilityLabels: Record<DriverAvailability, string> = {
-  AVAILABLE: 'Bo‘sh',
-  PLANNED: 'Rejada',
-  BUSY: 'Band',
+  AVAILABLE: "Bo‘sh",
+  PLANNED: "Rejada",
+  BUSY: "Band",
 };
 
 const availabilityClass: Record<DriverAvailability, string> = {
-  AVAILABLE: 'bg-emerald-50 text-emerald-700',
-  PLANNED: 'bg-amber-50 text-amber-700',
-  BUSY: 'bg-rose-50 text-rose-700',
+  AVAILABLE: "bg-emerald-50 text-emerald-700",
+  PLANNED: "bg-amber-50 text-amber-700",
+  BUSY: "bg-rose-50 text-rose-700",
 };
 
-const statusLabels: Record<ReadyOrder['status'], string> = {
-  PREPARING: 'Tayyorlanmoqda',
+const statusLabels: Record<ReadyOrder["status"], string> = {
+  PREPARING: "Tayyorlanmoqda",
 };
 
 type SavedUser = {
   role?: string | null;
 };
 
-const deliveryDispatchRoles = ['OWNER', 'MANAGER', 'OPERATOR', 'WAREHOUSE'];
+const deliveryDispatchRoles = ["OWNER", "MANAGER", "OPERATOR", "WAREHOUSE"];
 
 function canAccessDeliveryDispatch(role: string | null | undefined) {
   return Boolean(role && deliveryDispatchRoles.includes(role));
 }
 
-const tripStatusLabels: Record<ActiveTrip['status'], string> = {
-  PLANNED: 'Rejada',
-  IN_PROGRESS: 'Yo‘lda',
+const tripStatusLabels: Record<ActiveTrip["status"], string> = {
+  PLANNED: "Rejada",
+  IN_PROGRESS: "Yo‘lda",
 };
 
-const tripStatusClass: Record<ActiveTrip['status'], string> = {
-  PLANNED: 'bg-amber-50 text-amber-700',
-  IN_PROGRESS: 'bg-blue-50 text-blue-700',
+const tripStatusClass: Record<ActiveTrip["status"], string> = {
+  PLANNED: "bg-amber-50 text-amber-700",
+  IN_PROGRESS: "bg-blue-50 text-blue-700",
 };
 
 function formatMoney(value?: number | null) {
@@ -132,14 +132,15 @@ export default function DeliveryDispatchPage() {
   const [orders, setOrders] = useState<ReadyOrder[]>([]);
   const [trips, setTrips] = useState<ActiveTrip[]>([]);
 
-  const [selectedDriverId, setSelectedDriverId] = useState('');
+  const [selectedDriverId, setSelectedDriverId] = useState("");
   const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [cancellingTripId, setCancellingTripId] = useState<string | null>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const selectedDriver = useMemo(
     () => drivers.find((driver) => driver.id === selectedDriverId) ?? null,
@@ -147,15 +148,15 @@ export default function DeliveryDispatchPage() {
   );
 
   const availableDrivers = useMemo(
-    () => drivers.filter((driver) => driver.availability === 'AVAILABLE'),
+    () => drivers.filter((driver) => driver.availability === "AVAILABLE"),
     [drivers],
   );
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
+    const savedUser = localStorage.getItem("user");
 
     if (!savedUser) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
@@ -163,33 +164,36 @@ export default function DeliveryDispatchPage() {
       const user = JSON.parse(savedUser) as SavedUser;
 
       if (!canAccessDeliveryDispatch(user.role)) {
-        router.push('/dashboard');
+        router.push("/dashboard");
         return;
       }
 
       setIsAuthorized(true);
       loadData();
     } catch {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('user');
-      router.push('/login');
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("user");
+      router.push("/login");
     }
   }, [router]);
 
-  async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-    const token = localStorage.getItem('accessToken');
+  async function request<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<T> {
+    const token = localStorage.getItem("accessToken");
 
     const response = await fetch(`${API_URL}${path}`, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
         ...(options.headers ?? {}),
       },
     });
 
     if (!response.ok) {
-      let message = 'So‘rov bajarilmadi';
+      let message = "So‘rov bajarilmadi";
 
       try {
         const data = await response.json();
@@ -207,12 +211,12 @@ export default function DeliveryDispatchPage() {
   async function loadData() {
     try {
       setIsLoading(true);
-      setError('');
+      setError("");
 
       const [driversData, ordersData, tripsData] = await Promise.all([
-        request<Driver[]>('/delivery/drivers'),
-        request<ReadyOrder[]>('/delivery/ready-orders'),
-        request<ActiveTrip[]>('/delivery/trips'),
+        request<Driver[]>("/delivery/drivers"),
+        request<ReadyOrder[]>("/delivery/ready-orders"),
+        request<ActiveTrip[]>("/delivery/trips"),
       ]);
 
       setDrivers(driversData);
@@ -220,12 +224,14 @@ export default function DeliveryDispatchPage() {
       setTrips(tripsData);
 
       const firstAvailableDriver = driversData.find(
-        (driver) => driver.availability === 'AVAILABLE',
+        (driver) => driver.availability === "AVAILABLE",
       );
 
-      setSelectedDriverId((current) => current || firstAvailableDriver?.id || '');
+      setSelectedDriverId(
+        (current) => current || firstAvailableDriver?.id || "",
+      );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ma’lumot yuklanmadi');
+      setError(err instanceof Error ? err.message : "Ma’lumot yuklanmadi");
     } finally {
       setIsLoading(false);
     }
@@ -243,36 +249,61 @@ export default function DeliveryDispatchPage() {
     event.preventDefault();
 
     if (!selectedDriverId) {
-      setError('Avval shofyor tanlang');
+      setError("Avval shofyor tanlang");
       return;
     }
 
     if (selectedOrderIds.length === 0) {
-      setError('Kamida bitta zakaz tanlang');
+      setError("Kamida bitta zakaz tanlang");
       return;
     }
 
     try {
       setIsCreating(true);
-      setError('');
-      setSuccessMessage('');
+      setError("");
+      setSuccessMessage("");
 
-      await request('/delivery/trips', {
-        method: 'POST',
+      await request("/delivery/trips", {
+        method: "POST",
         body: JSON.stringify({
           driverId: selectedDriverId,
           orderIds: selectedOrderIds,
         }),
       });
 
-      setSuccessMessage('Reys yaratildi. Driver boshlaganda zakaz Yo‘lda statusiga o‘tadi');
+      setSuccessMessage(
+        "Reys yaratildi. Driver boshlaganda zakaz Yo‘lda statusiga o‘tadi",
+      );
       setSelectedOrderIds([]);
-      setSelectedDriverId('');
+      setSelectedDriverId("");
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Reys yaratilmadi');
+      setError(err instanceof Error ? err.message : "Reys yaratilmadi");
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function cancelTrip(tripId: string) {
+    const confirmed = window.confirm("Bu reys bekor qilinsinmi?");
+
+    if (!confirmed) return;
+
+    try {
+      setCancellingTripId(tripId);
+      setError("");
+      setSuccessMessage("");
+
+      await request(`/delivery/trips/${tripId}/cancel`, {
+        method: "POST",
+      });
+
+      setSuccessMessage("Reys bekor qilindi. Shofyor bo‘shatildi.");
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reys bekor qilinmadi");
+    } finally {
+      setCancellingTripId(null);
     }
   }
 
@@ -298,8 +329,8 @@ export default function DeliveryDispatchPage() {
               Yetkazib berish reyslari
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-500">
-              Tayyorlanayotgan zakazlarni tanlang, bo‘sh shofyorni belgilang va bitta reys
-              yarating.
+              Tayyorlanayotgan zakazlarni tanlang, bo‘sh shofyorni belgilang va
+              bitta reys yarating.
             </p>
           </div>
 
@@ -330,7 +361,10 @@ export default function DeliveryDispatchPage() {
             <LoadingSpinner />
           </div>
         ) : (
-          <form onSubmit={createTrip} className="grid gap-6 lg:grid-cols-[1fr_380px]">
+          <form
+            onSubmit={createTrip}
+            className="grid gap-6 lg:grid-cols-[1fr_380px]"
+          >
             <section className="space-y-4">
               <div className="rounded-3xl bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
@@ -339,7 +373,8 @@ export default function DeliveryDispatchPage() {
                       Reysga tayyor zakazlar
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                      PREPARING holatdagi, hali aktiv reysga qo‘shilmagan zakazlar.
+                      PREPARING holatdagi, hali aktiv reysga qo‘shilmagan
+                      zakazlar.
                     </p>
                   </div>
 
@@ -363,8 +398,8 @@ export default function DeliveryDispatchPage() {
                         key={order.id}
                         className={
                           isSelected
-                            ? 'block cursor-pointer rounded-3xl border-2 border-slate-900 bg-white p-4 shadow-sm'
-                            : 'block cursor-pointer rounded-3xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300'
+                            ? "block cursor-pointer rounded-3xl border-2 border-slate-900 bg-white p-4 shadow-sm"
+                            : "block cursor-pointer rounded-3xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300"
                         }
                       >
                         <div className="flex items-start gap-3">
@@ -386,8 +421,8 @@ export default function DeliveryDispatchPage() {
                             </div>
 
                             <p className="mt-1 text-sm text-slate-500">
-                              {order.customer.phone || 'Telefon yo‘q'} ·{' '}
-                              {order.customer.address || 'Manzil yo‘q'}
+                              {order.customer.phone || "Telefon yo‘q"} ·{" "}
+                              {order.customer.address || "Manzil yo‘q"}
                             </p>
 
                             <div className="mt-3 flex flex-wrap gap-2">
@@ -471,10 +506,14 @@ export default function DeliveryDispatchPage() {
 
                 <button
                   type="submit"
-                  disabled={isCreating || !selectedDriverId || selectedOrderIds.length === 0}
+                  disabled={
+                    isCreating ||
+                    !selectedDriverId ||
+                    selectedOrderIds.length === 0
+                  }
                   className="mt-5 w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isCreating ? 'Yaratilmoqda...' : 'Reys yaratish'}
+                  {isCreating ? "Yaratilmoqda..." : "Reys yaratish"}
                 </button>
               </div>
 
@@ -532,7 +571,7 @@ export default function DeliveryDispatchPage() {
                                 {stop.sortOrder}. {stop.order.customer.name}
                               </p>
                               <p className="mt-1 text-xs text-slate-500">
-                                {stop.order.customer.address || 'Manzil yo‘q'}
+                                {stop.order.customer.address || "Manzil yo‘q"}
                               </p>
                               <div className="mt-2 flex flex-wrap gap-2">
                                 {stop.order.items.map((item) => (
@@ -554,7 +593,9 @@ export default function DeliveryDispatchPage() {
               </div>
 
               <div className="rounded-3xl bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-bold text-slate-900">Driver status</h2>
+                <h2 className="text-lg font-bold text-slate-900">
+                  Driver status
+                </h2>
                 <div className="mt-4 space-y-3">
                   {drivers.map((driver) => (
                     <div
