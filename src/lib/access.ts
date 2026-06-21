@@ -72,8 +72,7 @@ export function canUpdateOrderStatus(role: string | null | undefined) {
     role === "OWNER" ||
     role === "MANAGER" ||
     role === "OPERATOR" ||
-    role === "WAREHOUSE" ||
-    role === "DELIVERY"
+    role === "WAREHOUSE"
   );
 }
 
@@ -87,6 +86,10 @@ export function nextStatusForRole(
 
   if (!nextStatus) return null;
 
+  if (nextStatus === "SHIPPED" || nextStatus === "DELIVERED") {
+    return null;
+  }
+
   if (role === "OWNER" || role === "MANAGER") {
     return nextStatus;
   }
@@ -98,13 +101,11 @@ export function nextStatusForRole(
   }
 
   if (role === "WAREHOUSE") {
-    return nextStatus === "PREPARING" || nextStatus === "SHIPPED"
-      ? nextStatus
-      : null;
+    return nextStatus === "PREPARING" ? nextStatus : null;
   }
 
   if (role === "DELIVERY") {
-    return nextStatus === "DELIVERED" ? nextStatus : null;
+    return null;
   }
 
   return null;
