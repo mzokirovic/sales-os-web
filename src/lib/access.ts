@@ -11,6 +11,7 @@ export type OrderStatus =
   | "CHECKED"
   | "CONFIRMED"
   | "PREPARING"
+  | "READY"
   | "SHIPPED"
   | "DELIVERED"
   | "PAID";
@@ -22,6 +23,7 @@ export const fulfillmentStatusFlow: OrderStatus[] = [
   "CHECKED",
   "CONFIRMED",
   "PREPARING",
+  "READY",
   "SHIPPED",
   "DELIVERED",
 ];

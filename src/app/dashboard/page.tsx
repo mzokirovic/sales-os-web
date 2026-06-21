@@ -1,19 +1,20 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { AppShell } from '@/components/app-shell';
-import { LoadingSpinner } from '@/components/loading-spinner';
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 type OrderStatus =
-  | 'NEW'
-  | 'CHECKED'
-  | 'CONFIRMED'
-  | 'PREPARING'
-  | 'SHIPPED'
-  | 'DELIVERED'
-  | 'PAID';
+  | "NEW"
+  | "CHECKED"
+  | "CONFIRMED"
+  | "PREPARING"
+  | "READY"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "PAID";
 
 type RecentOrder = {
   id: string;
@@ -57,35 +58,37 @@ type DashboardSummary = {
 };
 
 const statusFlow: OrderStatus[] = [
-  'NEW',
-  'CHECKED',
-  'CONFIRMED',
-  'PREPARING',
-  'SHIPPED',
-  'DELIVERED',
-  'PAID',
+  "NEW",
+  "CHECKED",
+  "CONFIRMED",
+  "PREPARING",
+  "READY",
+  "SHIPPED",
+  "DELIVERED",
+  "PAID",
 ];
 
 const statusLabels: Record<OrderStatus, string> = {
-  NEW: 'Yangi',
-  CHECKED: 'Tekshirildi',
-  CONFIRMED: 'Tasdiqlandi',
-  PREPARING: 'Tayyorlanmoqda',
-  SHIPPED: 'Yo‘lda',
-  DELIVERED: 'Yetkazildi',
-  PAID: 'Yopildi',
+  NEW: "Yangi",
+  CHECKED: "Tekshirildi",
+  CONFIRMED: "Tasdiqlandi",
+  PREPARING: "Tayyorlanmoqda",
+  READY: "Tayyor",
+  SHIPPED: "Yo‘lda",
+  DELIVERED: "Yetkazildi",
+  PAID: "Yopildi",
 };
 
 const statusBadgeClass: Record<OrderStatus, string> = {
-  NEW: 'bg-blue-50 text-blue-700',
-  CHECKED: 'bg-indigo-50 text-indigo-700',
-  CONFIRMED: 'bg-violet-50 text-violet-700',
-  PREPARING: 'bg-amber-50 text-amber-700',
-  SHIPPED: 'bg-orange-50 text-orange-700',
-  DELIVERED: 'bg-emerald-50 text-emerald-700',
-  PAID: 'bg-slate-900 text-white',
+  NEW: "bg-blue-50 text-blue-700",
+  CHECKED: "bg-indigo-50 text-indigo-700",
+  CONFIRMED: "bg-violet-50 text-violet-700",
+  PREPARING: "bg-amber-50 text-amber-700",
+  READY: "bg-emerald-50 text-emerald-700",
+  SHIPPED: "bg-orange-50 text-orange-700",
+  DELIVERED: "bg-emerald-50 text-emerald-700",
+  PAID: "bg-slate-900 text-white",
 };
-
 
 function formatMoney(value: number) {
   return `${value.toLocaleString()} so‘m`;
@@ -100,7 +103,7 @@ export default function DashboardPage() {
 
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -136,14 +139,14 @@ export default function DashboardPage() {
   }, [summary]);
 
   async function loadSummary() {
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem("accessToken");
 
       if (!token) {
-        router.push('/login');
+        router.push("/login");
         return;
       }
 
@@ -154,20 +157,20 @@ export default function DashboardPage() {
       });
 
       if (response.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
-        router.push('/login');
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        router.push("/login");
         return;
       }
 
       if (!response.ok) {
-        throw new Error('Dashboard ma’lumotlarini yuklashda xatolik');
+        throw new Error("Dashboard ma’lumotlarini yuklashda xatolik");
       }
 
       const data = (await response.json()) as DashboardSummary;
       setSummary(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setError(err instanceof Error ? err.message : "Noma’lum xatolik");
     } finally {
       setIsLoading(false);
     }
@@ -200,7 +203,7 @@ export default function DashboardPage() {
                 Yangilanmoqda...
               </span>
             ) : (
-              'Yangilash'
+              "Yangilash"
             )}
           </button>
         </div>
@@ -239,9 +242,7 @@ export default function DashboardPage() {
           <>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm font-medium text-slate-500">
-                  Jami savdo
-                </p>
+                <p className="text-sm font-medium text-slate-500">Jami savdo</p>
                 <p className="mt-3 text-2xl font-bold text-slate-900">
                   {formatMoney(summary.totalSales)}
                 </p>
@@ -251,9 +252,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm font-medium text-slate-500">
-                  To‘langan
-                </p>
+                <p className="text-sm font-medium text-slate-500">To‘langan</p>
                 <p className="mt-3 text-2xl font-bold text-emerald-600">
                   {formatMoney(paidAmount)}
                 </p>
@@ -263,9 +262,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm font-medium text-slate-500">
-                  Ochiq qarz
-                </p>
+                <p className="text-sm font-medium text-slate-500">Ochiq qarz</p>
                 <p className="mt-3 text-2xl font-bold text-red-600">
                   {formatMoney(summary.openDebt)}
                 </p>
@@ -275,9 +272,7 @@ export default function DashboardPage() {
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm font-medium text-slate-500">
-                  Zakazlar
-                </p>
+                <p className="text-sm font-medium text-slate-500">Zakazlar</p>
                 <p className="mt-3 text-2xl font-bold text-slate-900">
                   {summary.ordersCount}
                 </p>
@@ -315,7 +310,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-6">
-<section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-bold text-slate-900">
                   Statuslar bo‘yicha
                 </h2>
@@ -402,12 +397,12 @@ export default function DashboardPage() {
                           </div>
 
                           <p className="mt-1 text-sm text-slate-500">
-                            {order.customer.phone ?? 'Telefon yo‘q'} ·{' '}
-                            {order.customer.address ?? 'Manzil yo‘q'}
+                            {order.customer.phone ?? "Telefon yo‘q"} ·{" "}
+                            {order.customer.address ?? "Manzil yo‘q"}
                           </p>
 
                           <p className="mt-1 text-sm text-slate-500">
-                            Yaratgan: {order.createdBy.fullName} ·{' '}
+                            Yaratgan: {order.createdBy.fullName} ·{" "}
                             {formatDate(order.createdAt)}
                           </p>
 
@@ -436,8 +431,8 @@ export default function DashboardPage() {
                             <span
                               className={
                                 order.debtAmount > 0
-                                  ? 'font-bold text-red-600'
-                                  : 'font-bold text-emerald-600'
+                                  ? "font-bold text-red-600"
+                                  : "font-bold text-emerald-600"
                               }
                             >
                               {formatMoney(order.debtAmount)}

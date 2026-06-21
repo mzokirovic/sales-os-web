@@ -1,19 +1,20 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { AppShell } from '@/components/app-shell';
-import { LoadingSpinner } from '@/components/loading-spinner';
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 type OrderStatus =
-  | 'NEW'
-  | 'CHECKED'
-  | 'CONFIRMED'
-  | 'PREPARING'
-  | 'SHIPPED'
-  | 'DELIVERED'
-  | 'PAID';
+  | "NEW"
+  | "CHECKED"
+  | "CONFIRMED"
+  | "PREPARING"
+  | "READY"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "PAID";
 
 type Customer = {
   id: string;
@@ -63,23 +64,25 @@ type Order = {
 };
 
 const statusLabels: Record<OrderStatus, string> = {
-  NEW: 'Yangi',
-  CHECKED: 'Tekshirildi',
-  CONFIRMED: 'Tasdiqlandi',
-  PREPARING: 'Tayyorlanmoqda',
-  SHIPPED: 'Yo‘lda',
-  DELIVERED: 'Yetkazildi',
-  PAID: 'Yopildi',
+  NEW: "Yangi",
+  CHECKED: "Tekshirildi",
+  CONFIRMED: "Tasdiqlandi",
+  PREPARING: "Tayyorlanmoqda",
+  READY: "Tayyor",
+  SHIPPED: "Yo‘lda",
+  DELIVERED: "Yetkazildi",
+  PAID: "Yopildi",
 };
 
 const statusBadgeClass: Record<OrderStatus, string> = {
-  NEW: 'bg-blue-50 text-blue-700',
-  CHECKED: 'bg-indigo-50 text-indigo-700',
-  CONFIRMED: 'bg-violet-50 text-violet-700',
-  PREPARING: 'bg-amber-50 text-amber-700',
-  SHIPPED: 'bg-orange-50 text-orange-700',
-  DELIVERED: 'bg-emerald-50 text-emerald-700',
-  PAID: 'bg-slate-900 text-white',
+  NEW: "bg-blue-50 text-blue-700",
+  CHECKED: "bg-indigo-50 text-indigo-700",
+  CONFIRMED: "bg-violet-50 text-violet-700",
+  PREPARING: "bg-amber-50 text-amber-700",
+  READY: "bg-emerald-50 text-emerald-700",
+  SHIPPED: "bg-orange-50 text-orange-700",
+  DELIVERED: "bg-emerald-50 text-emerald-700",
+  PAID: "bg-slate-900 text-white",
 };
 
 function formatMoney(value?: number | null) {
@@ -100,22 +103,28 @@ export default function CustomerDetailPage() {
   const router = useRouter();
   const params = useParams();
 
-  const customerId = typeof params.id === 'string' ? params.id : '';
+  const customerId = typeof params.id === "string" ? params.id : "";
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
   const totalSales = useMemo(() => {
-    return orders.reduce((sum, order) => sum + Number(order.totalAmount ?? 0), 0);
+    return orders.reduce(
+      (sum, order) => sum + Number(order.totalAmount ?? 0),
+      0,
+    );
   }, [orders]);
 
   const totalDebt = useMemo(() => {
-    return orders.reduce((sum, order) => sum + Number(order.debtAmount ?? 0), 0);
+    return orders.reduce(
+      (sum, order) => sum + Number(order.debtAmount ?? 0),
+      0,
+    );
   }, [orders]);
 
   const lastOrder = useMemo(() => {
@@ -123,10 +132,10 @@ export default function CustomerDetailPage() {
   }, [orders]);
 
   function getToken() {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
 
     if (!token) {
-      router.push('/login');
+      router.push("/login");
       return null;
     }
 
@@ -134,7 +143,7 @@ export default function CustomerDetailPage() {
   }
 
   async function loadCustomerDetail() {
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
@@ -155,22 +164,22 @@ export default function CustomerDetailPage() {
       ]);
 
       if (customerResponse.status === 401 || ordersResponse.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
-        router.push('/login');
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        router.push("/login");
         return;
       }
 
       if (customerResponse.status === 404) {
-        throw new Error('Mijoz topilmadi');
+        throw new Error("Mijoz topilmadi");
       }
 
       if (!customerResponse.ok) {
-        throw new Error('Mijoz ma’lumotlarini yuklashda xatolik');
+        throw new Error("Mijoz ma’lumotlarini yuklashda xatolik");
       }
 
       if (!ordersResponse.ok) {
-        throw new Error('Mijoz zakazlarini yuklashda xatolik');
+        throw new Error("Mijoz zakazlarini yuklashda xatolik");
       }
 
       const customerData = (await customerResponse.json()) as Customer;
@@ -179,7 +188,7 @@ export default function CustomerDetailPage() {
       setCustomer(customerData);
       setOrders(ordersData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setError(err instanceof Error ? err.message : "Noma’lum xatolik");
     } finally {
       setIsLoading(false);
     }
@@ -207,7 +216,7 @@ export default function CustomerDetailPage() {
           <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
               <h1 className="mt-2 text-3xl font-bold text-slate-900">
-                {customer?.name ?? 'Mijoz tafsilotlari'}
+                {customer?.name ?? "Mijoz tafsilotlari"}
               </h1>
             </div>
 
@@ -216,7 +225,7 @@ export default function CustomerDetailPage() {
               disabled={isLoading}
               className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoading ? 'Yuklanmoqda...' : 'Yangilash'}
+              {isLoading ? "Yuklanmoqda..." : "Yangilash"}
             </button>
           </div>
         </div>
@@ -261,7 +270,7 @@ export default function CustomerDetailPage() {
               <div className="rounded-2xl bg-white p-5 shadow-sm">
                 <p className="text-sm text-slate-500">Oxirgi zakaz</p>
                 <p className="mt-2 text-sm font-bold text-slate-900">
-                  {lastOrder ? formatDate(lastOrder.createdAt) : 'Yo‘q'}
+                  {lastOrder ? formatDate(lastOrder.createdAt) : "Yo‘q"}
                 </p>
               </div>
             </div>
@@ -282,14 +291,14 @@ export default function CustomerDetailPage() {
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-sm text-slate-500">Telefon</p>
                   <p className="mt-1 font-semibold text-slate-900">
-                    {customer.phone ?? 'Telefon yo‘q'}
+                    {customer.phone ?? "Telefon yo‘q"}
                   </p>
                 </div>
 
                 <div className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-sm text-slate-500">Manzil</p>
                   <p className="mt-1 font-semibold text-slate-900">
-                    {customer.address ?? 'Manzil yo‘q'}
+                    {customer.address ?? "Manzil yo‘q"}
                   </p>
                 </div>
 
@@ -350,7 +359,7 @@ export default function CustomerDetailPage() {
                             </div>
 
                             <p className="mt-2 font-semibold text-slate-900">
-                              {order.items.length} ta mahsulot ·{' '}
+                              {order.items.length} ta mahsulot ·{" "}
                               {order.createdBy.fullName}
                             </p>
                           </div>

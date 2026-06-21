@@ -1,26 +1,27 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { AppShell } from '@/components/app-shell';
+import Link from "next/link";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
 import {
   canAddPayment as canRoleAddPayment,
   fulfillmentStatusFlow,
   nextStatusForRole,
-} from '@/lib/access';
-import { LoadingSpinner } from '@/components/loading-spinner';
+} from "@/lib/access";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 type OrderStatus =
-  | 'NEW'
-  | 'CHECKED'
-  | 'CONFIRMED'
-  | 'PREPARING'
-  | 'SHIPPED'
-  | 'DELIVERED'
-  | 'PAID';
+  | "NEW"
+  | "CHECKED"
+  | "CONFIRMED"
+  | "PREPARING"
+  | "READY"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "PAID";
 
-type PaymentStatus = 'UNPAID' | 'PARTIAL' | 'PAID';
+type PaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
 
 type OrderItem = {
   id: string;
@@ -76,61 +77,65 @@ type User = {
 };
 
 const statusLabels: Record<OrderStatus, string> = {
-  NEW: 'Yangi',
-  CHECKED: 'Tekshirildi',
-  CONFIRMED: 'Tasdiqlandi',
-  PREPARING: 'Tayyorlanmoqda',
-  SHIPPED: 'Yo‘lda',
-  DELIVERED: 'Yetkazildi',
-  PAID: 'Yopilgan',
+  NEW: "Yangi",
+  CHECKED: "Tekshirildi",
+  CONFIRMED: "Tasdiqlandi",
+  PREPARING: "Tayyorlanmoqda",
+  READY: "Tayyor",
+  SHIPPED: "Yo‘lda",
+  DELIVERED: "Yetkazildi",
+  PAID: "Yopilgan",
 };
 
 const statusActionLabels: Partial<Record<OrderStatus, string>> = {
-  CHECKED: 'Tekshirish',
-  CONFIRMED: 'Tasdiqlash',
-  PREPARING: 'Tayyorlash',
-  SHIPPED: 'Yo‘lga chiqarish',
-  DELIVERED: 'Yetkazildi',
+  CHECKED: "Tekshirish",
+  CONFIRMED: "Tasdiqlash",
+  PREPARING: "Tayyorlash",
+  READY: "Tayyor deb belgilash",
+  SHIPPED: "Yo‘lga chiqarish",
+  DELIVERED: "Yetkazildi",
 };
 
 const statusDescription: Record<OrderStatus, string> = {
-  NEW: 'Yangi zakaz. Operator tekshirishi kerak.',
-  CHECKED: 'Tekshirildi. Endi tasdiqlash mumkin.',
-  CONFIRMED: 'Tasdiqlandi. Sklad tayyorlashni boshlaydi.',
-  PREPARING: 'Sklad tayyorlamoqda.',
-  SHIPPED: 'Zakaz yo‘lga chiqdi.',
-  DELIVERED: 'Mahsulot yetkazilgan. Pul alohida to‘lovlarda yopiladi.',
-  PAID: 'Eski yopilgan status. Endi to‘lov holati alohida yuritiladi.',
+  NEW: "Yangi zakaz. Operator tekshirishi kerak.",
+  CHECKED: "Tekshirildi. Endi tasdiqlash mumkin.",
+  CONFIRMED: "Tasdiqlandi. Sklad tayyorlashni boshlaydi.",
+  PREPARING: "Sklad tayyorlamoqda.",
+  READY: "Sklad tayyorlab bo‘ldi. Endi reysga qo‘shish mumkin.",
+  SHIPPED: "Zakaz yo‘lga chiqdi.",
+  DELIVERED: "Mahsulot yetkazilgan. Pul alohida to‘lovlarda yopiladi.",
+  PAID: "Eski yopilgan status. Endi to‘lov holati alohida yuritiladi.",
 };
 
 const statusBadgeClass: Record<OrderStatus, string> = {
-  NEW: 'bg-blue-50 text-blue-700',
-  CHECKED: 'bg-indigo-50 text-indigo-700',
-  CONFIRMED: 'bg-violet-50 text-violet-700',
-  PREPARING: 'bg-amber-50 text-amber-700',
-  SHIPPED: 'bg-orange-50 text-orange-700',
-  DELIVERED: 'bg-emerald-50 text-emerald-700',
-  PAID: 'bg-slate-900 text-white',
+  NEW: "bg-blue-50 text-blue-700",
+  CHECKED: "bg-indigo-50 text-indigo-700",
+  CONFIRMED: "bg-violet-50 text-violet-700",
+  PREPARING: "bg-amber-50 text-amber-700",
+  READY: "bg-emerald-50 text-emerald-700",
+  SHIPPED: "bg-orange-50 text-orange-700",
+  DELIVERED: "bg-emerald-50 text-emerald-700",
+  PAID: "bg-slate-900 text-white",
 };
 
 const paymentStatusLabels: Record<PaymentStatus, string> = {
-  UNPAID: 'To‘lanmagan',
-  PARTIAL: 'Qisman to‘langan',
-  PAID: 'To‘liq to‘langan',
+  UNPAID: "To‘lanmagan",
+  PARTIAL: "Qisman to‘langan",
+  PAID: "To‘liq to‘langan",
 };
 
 const paymentStatusClass: Record<PaymentStatus, string> = {
-  UNPAID: 'bg-red-50 text-red-700',
-  PARTIAL: 'bg-amber-50 text-amber-700',
-  PAID: 'bg-emerald-50 text-emerald-700',
+  UNPAID: "bg-red-50 text-red-700",
+  PARTIAL: "bg-amber-50 text-amber-700",
+  PAID: "bg-emerald-50 text-emerald-700",
 };
 
 const paymentMethodLabels: Record<string, string> = {
-  cash: 'Naqd',
-  card: 'Karta',
-  click: 'Click',
-  transfer: 'Bank o‘tkazma',
-  other: 'Boshqa',
+  cash: "Naqd",
+  card: "Karta",
+  click: "Click",
+  transfer: "Bank o‘tkazma",
+  other: "Boshqa",
 };
 
 function formatMoney(value?: number | null) {
@@ -144,7 +149,7 @@ function formatMoney(value?: number | null) {
 }
 
 function formatDate(value?: string | null) {
-  if (!value) return 'Sana yo‘q';
+  if (!value) return "Sana yo‘q";
 
   return new Date(value).toLocaleString();
 }
@@ -160,7 +165,7 @@ function getNextStatus(status: OrderStatus) {
 }
 
 function getActiveStatusIndex(status: OrderStatus) {
-  if (status === 'PAID') {
+  if (status === "PAID") {
     return fulfillmentStatusFlow.length - 1;
   }
 
@@ -175,10 +180,10 @@ function getPaymentStatus(order: Order): PaymentStatus {
   const paidAmount = Number(order.paidAmount ?? 0);
   const debtAmount = Number(order.debtAmount ?? 0);
 
-  if (paidAmount <= 0 && debtAmount > 0) return 'UNPAID';
-  if (debtAmount <= 0) return 'PAID';
+  if (paidAmount <= 0 && debtAmount > 0) return "UNPAID";
+  if (debtAmount <= 0) return "PAID";
 
-  return 'PARTIAL';
+  return "PARTIAL";
 }
 
 function sleep(ms: number) {
@@ -189,22 +194,22 @@ export default function OrderDetailPage() {
   const router = useRouter();
   const params = useParams();
 
-  const orderId = typeof params.id === 'string' ? params.id : '';
+  const orderId = typeof params.id === "string" ? params.id : "";
 
   const [order, setOrder] = useState<Order | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
 
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isAddingPayment, setIsAddingPayment] = useState(false);
 
-  const [error, setError] = useState('');
-  const [paymentError, setPaymentError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState("");
+  const [paymentError, setPaymentError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -221,7 +226,7 @@ export default function OrderDetailPage() {
   }, [order]);
 
   const paymentStatus = useMemo(() => {
-    if (!order) return 'UNPAID' as PaymentStatus;
+    if (!order) return "UNPAID" as PaymentStatus;
 
     return getPaymentStatus(order);
   }, [order]);
@@ -230,10 +235,10 @@ export default function OrderDetailPage() {
   const hasDebt = Number(order?.debtAmount ?? 0) > 0;
 
   function getToken() {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
 
     if (!token) {
-      router.push('/login');
+      router.push("/login");
       return null;
     }
 
@@ -241,10 +246,10 @@ export default function OrderDetailPage() {
   }
 
   function loadCurrentUser() {
-    const savedUser = localStorage.getItem('user');
+    const savedUser = localStorage.getItem("user");
 
     if (!savedUser) {
-      router.push('/login');
+      router.push("/login");
       return null;
     }
 
@@ -255,7 +260,7 @@ export default function OrderDetailPage() {
   }
 
   async function loadOrder() {
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
@@ -271,24 +276,24 @@ export default function OrderDetailPage() {
       });
 
       if (response.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
-        router.push('/login');
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        router.push("/login");
         return;
       }
 
       if (response.status === 404) {
-        throw new Error('Zakaz topilmadi');
+        throw new Error("Zakaz topilmadi");
       }
 
       if (!response.ok) {
-        throw new Error('Zakazni yuklashda xatolik');
+        throw new Error("Zakazni yuklashda xatolik");
       }
 
       const data = (await response.json()) as Order;
       setOrder(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setError(err instanceof Error ? err.message : "Noma’lum xatolik");
     } finally {
       setIsLoading(false);
     }
@@ -297,8 +302,8 @@ export default function OrderDetailPage() {
   async function updateStatus() {
     if (!order || !nextStatus) return;
 
-    setError('');
-    setSuccessMessage('');
+    setError("");
+    setSuccessMessage("");
     setIsUpdatingStatus(true);
 
     try {
@@ -306,10 +311,10 @@ export default function OrderDetailPage() {
       if (!token) return;
 
       const response = await fetch(`${apiUrl}/orders/${order.id}/status`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           status: nextStatus,
@@ -317,17 +322,17 @@ export default function OrderDetailPage() {
       });
 
       if (response.status === 403) {
-        throw new Error('Bu statusga o‘tkazish uchun ruxsat yo‘q');
+        throw new Error("Bu statusga o‘tkazish uchun ruxsat yo‘q");
       }
 
       if (!response.ok) {
-        throw new Error('Statusni yangilashda xatolik');
+        throw new Error("Statusni yangilashda xatolik");
       }
 
       setSuccessMessage(`Status: ${statusLabels[nextStatus]}`);
       await loadOrder();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setError(err instanceof Error ? err.message : "Noma’lum xatolik");
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -336,17 +341,17 @@ export default function OrderDetailPage() {
   function openPaymentModal() {
     if (!order) return;
 
-    setPaymentError('');
-    setSuccessMessage('');
-    setPaymentAmount(String(order.debtAmount || ''));
-    setPaymentMethod('cash');
+    setPaymentError("");
+    setSuccessMessage("");
+    setPaymentAmount(String(order.debtAmount || ""));
+    setPaymentMethod("cash");
     setIsPaymentOpen(true);
   }
 
   function closePaymentModal() {
     if (isAddingPayment) return;
 
-    setPaymentError('');
+    setPaymentError("");
     setIsPaymentOpen(false);
   }
 
@@ -355,19 +360,19 @@ export default function OrderDetailPage() {
 
     if (!order || isAddingPayment) return;
 
-    setPaymentError('');
-    setError('');
-    setSuccessMessage('');
+    setPaymentError("");
+    setError("");
+    setSuccessMessage("");
 
     const amount = Number(paymentAmount);
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      setPaymentError('To‘g‘ri summa kiriting');
+      setPaymentError("To‘g‘ri summa kiriting");
       return;
     }
 
     if (amount > order.debtAmount) {
-      setPaymentError('To‘lov hozirgi qarzdan katta bo‘lmasin');
+      setPaymentError("To‘lov hozirgi qarzdan katta bo‘lmasin");
       return;
     }
 
@@ -379,10 +384,10 @@ export default function OrderDetailPage() {
 
       const [response] = await Promise.all([
         fetch(`${apiUrl}/orders/${order.id}/payments`, {
-          method: 'POST',
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             amount,
@@ -393,20 +398,20 @@ export default function OrderDetailPage() {
       ]);
 
       if (response.status === 403) {
-        throw new Error('To‘lov qo‘shish uchun ruxsat yo‘q');
+        throw new Error("To‘lov qo‘shish uchun ruxsat yo‘q");
       }
 
       if (!response.ok) {
-        throw new Error('To‘lov qo‘shishda xatolik');
+        throw new Error("To‘lov qo‘shishda xatolik");
       }
 
-      setPaymentError('');
+      setPaymentError("");
       setIsPaymentOpen(false);
-      setSuccessMessage('To‘lov qo‘shildi');
+      setSuccessMessage("To‘lov qo‘shildi");
 
       await loadOrder();
     } catch (err) {
-      setPaymentError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setPaymentError(err instanceof Error ? err.message : "Noma’lum xatolik");
     } finally {
       setIsAddingPayment(false);
     }
@@ -423,15 +428,15 @@ export default function OrderDetailPage() {
     if (!isPaymentOpen) return;
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !isAddingPayment) {
+      if (event.key === "Escape" && !isAddingPayment) {
         closePaymentModal();
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPaymentOpen, isAddingPayment]);
@@ -449,9 +454,7 @@ export default function OrderDetailPage() {
 
           <div className="mt-4 flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <p className="text-sm font-medium text-slate-500">
-                Order detail
-              </p>
+              <p className="text-sm font-medium text-slate-500">Order detail</p>
               <h1 className="mt-2 text-3xl font-bold text-slate-900">
                 Zakaz tafsilotlari
               </h1>
@@ -465,7 +468,7 @@ export default function OrderDetailPage() {
               disabled={isLoading}
               className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isLoading ? 'Yuklanmoqda...' : 'Yangilash'}
+              {isLoading ? "Yuklanmoqda..." : "Yangilash"}
             </button>
           </div>
         </div>
@@ -519,8 +522,8 @@ export default function OrderDetailPage() {
                     </h2>
 
                     <p className="mt-2 text-sm text-slate-500">
-                      {order.customer.phone || 'Telefon yo‘q'} ·{' '}
-                      {order.customer.address || 'Manzil yo‘q'}
+                      {order.customer.phone || "Telefon yo‘q"} ·{" "}
+                      {order.customer.address || "Manzil yo‘q"}
                     </p>
                   </div>
 
@@ -553,8 +556,8 @@ export default function OrderDetailPage() {
                       className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isUpdatingStatus
-                        ? 'Yangilanmoqda...'
-                        : statusActionLabels[nextStatus] || 'Keyingi status'}
+                        ? "Yangilanmoqda..."
+                        : statusActionLabels[nextStatus] || "Keyingi status"}
                     </button>
                   ) : (
                     <span className="rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-600">
@@ -573,8 +576,8 @@ export default function OrderDetailPage() {
                           <div
                             className={`rounded-full px-3 py-2 text-xs font-bold ${
                               isDone
-                                ? 'bg-slate-900 text-white'
-                                : 'bg-slate-100 text-slate-500'
+                                ? "bg-slate-900 text-white"
+                                : "bg-slate-100 text-slate-500"
                             }`}
                           >
                             {statusLabels[status]}
@@ -583,7 +586,7 @@ export default function OrderDetailPage() {
                           {index < fulfillmentStatusFlow.length - 1 && (
                             <div
                               className={`h-0.5 w-8 ${
-                                isDone ? 'bg-slate-900' : 'bg-slate-200'
+                                isDone ? "bg-slate-900" : "bg-slate-200"
                               }`}
                             />
                           )}
@@ -627,11 +630,10 @@ export default function OrderDetailPage() {
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900">
-                      To‘lov
-                    </h2>
+                    <h2 className="text-lg font-bold text-slate-900">To‘lov</h2>
                     <p className="mt-1 text-sm text-slate-500">
-                      Pul bo‘lib-bo‘lib kelishi mumkin. Har biri alohida yoziladi.
+                      Pul bo‘lib-bo‘lib kelishi mumkin. Har biri alohida
+                      yoziladi.
                     </p>
                   </div>
 
@@ -647,9 +649,7 @@ export default function OrderDetailPage() {
 
                 <div className="mt-5 grid gap-3">
                   <div className="rounded-2xl bg-slate-50 p-4">
-                    <p className="text-xs font-semibold text-slate-500">
-                      Jami
-                    </p>
+                    <p className="text-xs font-semibold text-slate-500">Jami</p>
                     <p className="mt-1 text-xl font-bold text-slate-900">
                       {formatMoney(order.totalAmount)}
                     </p>
@@ -666,9 +666,7 @@ export default function OrderDetailPage() {
                     </div>
 
                     <div className="rounded-2xl bg-red-50 p-4">
-                      <p className="text-xs font-semibold text-red-700">
-                        Qarz
-                      </p>
+                      <p className="text-xs font-semibold text-red-700">Qarz</p>
                       <p className="mt-1 font-bold text-red-800">
                         {formatMoney(order.debtAmount)}
                       </p>
@@ -709,8 +707,8 @@ export default function OrderDetailPage() {
                           </p>
                           <p className="mt-1 text-sm text-slate-500">
                             {paymentMethodLabels[
-                              payment.paymentMethod ?? 'other'
-                            ] ?? 'Boshqa'}
+                              payment.paymentMethod ?? "other"
+                            ] ?? "Boshqa"}
                           </p>
                         </div>
 
@@ -724,9 +722,7 @@ export default function OrderDetailPage() {
               </section>
 
               <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-bold text-slate-900">
-                  Qo‘shimcha
-                </h2>
+                <h2 className="text-lg font-bold text-slate-900">Qo‘shimcha</h2>
 
                 <div className="mt-4 space-y-3 text-sm">
                   <div className="flex justify-between gap-4">
@@ -828,7 +824,7 @@ export default function OrderDetailPage() {
                 disabled={isAddingPayment}
                 className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isAddingPayment ? 'Qo‘shilmoqda...' : 'To‘lov qo‘shish'}
+                {isAddingPayment ? "Qo‘shilmoqda..." : "To‘lov qo‘shish"}
               </button>
             </form>
           </div>

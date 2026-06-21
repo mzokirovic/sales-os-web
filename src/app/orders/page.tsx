@@ -1,19 +1,20 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { AppShell } from '@/components/app-shell';
-import { LoadingSpinner } from '@/components/loading-spinner';
+import Link from "next/link";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 type OrderStatus =
-  | 'NEW'
-  | 'CHECKED'
-  | 'CONFIRMED'
-  | 'PREPARING'
-  | 'SHIPPED'
-  | 'DELIVERED'
-  | 'PAID';
+  | "NEW"
+  | "CHECKED"
+  | "CONFIRMED"
+  | "PREPARING"
+  | "READY"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "PAID";
 
 type Customer = {
   id: string;
@@ -51,33 +52,35 @@ type FormItem = {
   quantity: string;
 };
 
-type StatusFilter = 'ALL' | OrderStatus;
-type DebtFilter = 'ALL' | 'OPEN' | 'CLOSED';
+type StatusFilter = "ALL" | OrderStatus;
+type DebtFilter = "ALL" | "OPEN" | "CLOSED";
 
 const statusLabels: Record<OrderStatus, string> = {
-  NEW: 'Yangi',
-  CHECKED: 'Tekshirildi',
-  CONFIRMED: 'Tasdiqlandi',
-  PREPARING: 'Tayyorlanmoqda',
-  SHIPPED: 'Yo‘lda',
-  DELIVERED: 'Yetkazildi',
-  PAID: 'Yopildi',
+  NEW: "Yangi",
+  CHECKED: "Tekshirildi",
+  CONFIRMED: "Tasdiqlandi",
+  PREPARING: "Tayyorlanmoqda",
+  READY: "Tayyor",
+  SHIPPED: "Yo‘lda",
+  DELIVERED: "Yetkazildi",
+  PAID: "Yopildi",
 };
 
 const statusBadgeClass: Record<OrderStatus, string> = {
-  NEW: 'bg-blue-50 text-blue-700',
-  CHECKED: 'bg-indigo-50 text-indigo-700',
-  CONFIRMED: 'bg-violet-50 text-violet-700',
-  PREPARING: 'bg-amber-50 text-amber-700',
-  SHIPPED: 'bg-orange-50 text-orange-700',
-  DELIVERED: 'bg-emerald-50 text-emerald-700',
-  PAID: 'bg-slate-900 text-white',
+  NEW: "bg-blue-50 text-blue-700",
+  CHECKED: "bg-indigo-50 text-indigo-700",
+  CONFIRMED: "bg-violet-50 text-violet-700",
+  PREPARING: "bg-amber-50 text-amber-700",
+  READY: "bg-emerald-50 text-emerald-700",
+  SHIPPED: "bg-orange-50 text-orange-700",
+  DELIVERED: "bg-emerald-50 text-emerald-700",
+  PAID: "bg-slate-900 text-white",
 };
 
 const initialItems: FormItem[] = [
   {
-    productId: '',
-    quantity: '1',
+    productId: "",
+    quantity: "1",
   },
 ];
 
@@ -106,21 +109,21 @@ export default function OrdersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
-  const [customerId, setCustomerId] = useState('');
-  const [paidAmount, setPaidAmount] = useState('0');
+  const [customerId, setCustomerId] = useState("");
+  const [paidAmount, setPaidAmount] = useState("0");
   const [items, setItems] = useState<FormItem[]>(initialItems);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [debtFilter, setDebtFilter] = useState<DebtFilter>('ALL');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
+  const [debtFilter, setDebtFilter] = useState<DebtFilter>("ALL");
 
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const [error, setError] = useState('');
-  const [formError, setFormError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -168,31 +171,34 @@ export default function OrdersPage() {
       const matchesSearch =
         !query ||
         order.customer.name.toLowerCase().includes(query) ||
-        (order.customer.phone ?? '').toLowerCase().includes(query) ||
-        (order.customer.address ?? '').toLowerCase().includes(query) ||
+        (order.customer.phone ?? "").toLowerCase().includes(query) ||
+        (order.customer.address ?? "").toLowerCase().includes(query) ||
         statusLabels[order.status].toLowerCase().includes(query);
 
       const matchesStatus =
-        statusFilter === 'ALL' || order.status === statusFilter;
+        statusFilter === "ALL" || order.status === statusFilter;
 
       const matchesDebt =
-        debtFilter === 'ALL' ||
-        (debtFilter === 'OPEN' && order.debtAmount > 0) ||
-        (debtFilter === 'CLOSED' && order.debtAmount <= 0);
+        debtFilter === "ALL" ||
+        (debtFilter === "OPEN" && order.debtAmount > 0) ||
+        (debtFilter === "CLOSED" && order.debtAmount <= 0);
 
       return matchesSearch && matchesStatus && matchesDebt;
     });
   }, [orders, searchQuery, statusFilter, debtFilter]);
 
   const openDebtTotal = useMemo(() => {
-    return orders.reduce((sum, order) => sum + Number(order.debtAmount ?? 0), 0);
+    return orders.reduce(
+      (sum, order) => sum + Number(order.debtAmount ?? 0),
+      0,
+    );
   }, [orders]);
 
   function getToken() {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
 
     if (!token) {
-      router.push('/login');
+      router.push("/login");
       return null;
     }
 
@@ -200,7 +206,7 @@ export default function OrdersPage() {
   }
 
   async function loadData() {
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
@@ -231,22 +237,22 @@ export default function OrdersPage() {
         customersResponse.status === 401 ||
         productsResponse.status === 401
       ) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
-        router.push('/login');
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        router.push("/login");
         return;
       }
 
       if (!ordersResponse.ok) {
-        throw new Error('Zakazlarni yuklashda xatolik');
+        throw new Error("Zakazlarni yuklashda xatolik");
       }
 
       if (!customersResponse.ok) {
-        throw new Error('Mijozlarni yuklashda xatolik');
+        throw new Error("Mijozlarni yuklashda xatolik");
       }
 
       if (!productsResponse.ok) {
-        throw new Error('Mahsulotlarni yuklashda xatolik');
+        throw new Error("Mahsulotlarni yuklashda xatolik");
       }
 
       const [ordersData, customersData, productsData] = await Promise.all([
@@ -263,7 +269,7 @@ export default function OrdersPage() {
         setCustomerId(customersData[0].id);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setError(err instanceof Error ? err.message : "Noma’lum xatolik");
     } finally {
       setIsLoading(false);
     }
@@ -278,15 +284,15 @@ export default function OrdersPage() {
     if (!isCreateOpen) return;
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         closeCreateModal();
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isCreateOpen, isCreating]);
 
@@ -307,8 +313,8 @@ export default function OrdersPage() {
     setItems((currentItems) => [
       ...currentItems,
       {
-        productId: '',
-        quantity: '1',
+        productId: "",
+        quantity: "1",
       },
     ]);
   }
@@ -325,38 +331,38 @@ export default function OrdersPage() {
 
   function validateOrder() {
     if (!customerId) {
-      return 'Mijoz tanlang';
+      return "Mijoz tanlang";
     }
 
     if (items.length === 0) {
-      return 'Kamida bitta mahsulot tanlang';
+      return "Kamida bitta mahsulot tanlang";
     }
 
     for (const item of items) {
       if (!item.productId) {
-        return 'Har bir qatorda mahsulot tanlang';
+        return "Har bir qatorda mahsulot tanlang";
       }
 
       const quantity = Number(item.quantity);
 
       if (!Number.isFinite(quantity) || quantity <= 0) {
-        return 'Mahsulot soni 0 dan katta bo‘lishi kerak';
+        return "Mahsulot soni 0 dan katta bo‘lishi kerak";
       }
     }
 
     if (paidAmountNumber > totalAmount) {
-      return 'To‘langan summa jami summadan katta bo‘lishi mumkin emas';
+      return "To‘langan summa jami summadan katta bo‘lishi mumkin emas";
     }
 
-    return '';
+    return "";
   }
 
   async function createOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setError('');
-    setFormError('');
-    setSuccessMessage('');
+    setError("");
+    setFormError("");
+    setSuccessMessage("");
 
     const validationError = validateOrder();
 
@@ -373,10 +379,10 @@ export default function OrdersPage() {
 
       const [response] = await Promise.all([
         fetch(`${apiUrl}/orders`, {
-          method: 'POST',
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             customerId,
@@ -391,45 +397,45 @@ export default function OrdersPage() {
       ]);
 
       if (response.status === 403) {
-        throw new Error('Zakaz yaratish uchun ruxsat yo‘q');
+        throw new Error("Zakaz yaratish uchun ruxsat yo‘q");
       }
 
       if (!response.ok) {
-        throw new Error('Zakaz yaratishda xatolik');
+        throw new Error("Zakaz yaratishda xatolik");
       }
 
       setItems(initialItems);
-      setPaidAmount('0');
-      setFormError('');
+      setPaidAmount("0");
+      setFormError("");
       setIsCreateOpen(false);
-      setSuccessMessage('Zakaz yaratildi');
+      setSuccessMessage("Zakaz yaratildi");
 
       await loadData();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setFormError(err instanceof Error ? err.message : "Noma’lum xatolik");
     } finally {
       setIsCreating(false);
     }
   }
 
   function openCreateModal() {
-    setError('');
-    setFormError('');
-    setSuccessMessage('');
+    setError("");
+    setFormError("");
+    setSuccessMessage("");
     setIsCreateOpen(true);
   }
 
   function closeCreateModal() {
     if (isCreating) return;
 
-    setFormError('');
+    setFormError("");
     setIsCreateOpen(false);
   }
 
   function resetFilters() {
-    setSearchQuery('');
-    setStatusFilter('ALL');
-    setDebtFilter('ALL');
+    setSearchQuery("");
+    setStatusFilter("ALL");
+    setDebtFilter("ALL");
   }
 
   return (
@@ -438,9 +444,7 @@ export default function OrdersPage() {
         <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="text-sm font-medium text-slate-500">Orders</p>
-            <h1 className="mt-2 text-3xl font-bold text-slate-900">
-              Zakazlar
-            </h1>
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">Zakazlar</h1>
           </div>
 
           <div className="flex flex-col gap-3 sm:items-end">
@@ -454,20 +458,20 @@ export default function OrdersPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl bg-white px-5 py-4 shadow-sm">
-              <p className="text-sm text-slate-500">Jami zakaz</p>
-              <p className="mt-1 text-2xl font-bold text-slate-900">
-                {orders.length}
-              </p>
-            </div>
+                <p className="text-sm text-slate-500">Jami zakaz</p>
+                <p className="mt-1 text-2xl font-bold text-slate-900">
+                  {orders.length}
+                </p>
+              </div>
 
-            <div className="rounded-2xl bg-white px-5 py-4 shadow-sm">
-              <p className="text-sm text-slate-500">Ochiq qarz</p>
-              <p className="mt-1 text-2xl font-bold text-red-600">
-                {formatMoney(openDebtTotal)}
-              </p>
+              <div className="rounded-2xl bg-white px-5 py-4 shadow-sm">
+                <p className="text-sm text-slate-500">Ochiq qarz</p>
+                <p className="mt-1 text-2xl font-bold text-red-600">
+                  {formatMoney(openDebtTotal)}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
         </div>
 
         {error ? (
@@ -515,168 +519,181 @@ export default function OrdersPage() {
                   ) : null}
 
                   <form onSubmit={createOrder} className="space-y-4">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Mijoz
-                </label>
-                <select
-                  value={customerId}
-                  onChange={(event) => setCustomerId(event.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
-                >
-                  <option value="">Mijoz tanlang</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center justify-between">
-                  <label className="block text-sm font-medium text-slate-700">
-                    Mahsulotlar
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={addItem}
-                    className="text-sm font-bold text-slate-900 hover:underline"
-                  >
-                    + Qo‘shish
-                  </button>
-                </div>
-
-                <div className="space-y-3">
-                  {items.map((item, index) => {
-                    const product = productsById.get(item.productId);
-                    const quantity = Number(item.quantity);
-                    const rowTotal =
-                      product && Number.isFinite(quantity) && quantity > 0
-                        ? product.price * quantity
-                        : 0;
-
-                    return (
-                      <div
-                        key={index}
-                        className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        Mijoz
+                      </label>
+                      <select
+                        value={customerId}
+                        onChange={(event) => setCustomerId(event.target.value)}
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
                       >
-                        <div>
-                          <label className="mb-2 block text-xs font-semibold text-slate-500">
-                            Mahsulot
-                          </label>
-                          <select
-                            value={item.productId}
-                            onChange={(event) =>
-                              updateItem(index, 'productId', event.target.value)
-                            }
-                            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
-                          >
-                            <option value="">Mahsulot tanlang</option>
-                            {products.map((productItem) => (
-                              <option key={productItem.id} value={productItem.id}>
-                                {productItem.name} ·{' '}
-                                {formatMoney(productItem.price)}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                        <option value="">Mijoz tanlang</option>
+                        {customers.map((customer) => (
+                          <option key={customer.id} value={customer.id}>
+                            {customer.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                        <div className="mt-3 grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="mb-2 block text-xs font-semibold text-slate-500">
-                              Soni
-                            </label>
-                            <input
-                              value={item.quantity}
-                              onChange={(event) =>
-                                updateItem(index, 'quantity', event.target.value)
-                              }
-                              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
-                            />
-                          </div>
+                    <div>
+                      <div className="mb-2 flex items-center justify-between">
+                        <label className="block text-sm font-medium text-slate-700">
+                          Mahsulotlar
+                        </label>
 
-                          <div>
-                            <label className="mb-2 block text-xs font-semibold text-slate-500">
-                              Narx
-                            </label>
-                            <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900">
-                              {formatMoney(product?.price)}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mt-3 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-sm">
-                          <span className="text-slate-500">Qator jami</span>
-                          <span className="font-bold text-slate-900">
-                            {formatMoney(rowTotal)}
-                          </span>
-                        </div>
-
-                        {items.length > 1 ? (
-                          <button
-                            type="button"
-                            onClick={() => removeItem(index)}
-                            className="mt-3 text-sm font-semibold text-red-600 hover:underline"
-                          >
-                            Qatorni olib tashlash
-                          </button>
-                        ) : null}
+                        <button
+                          type="button"
+                          onClick={addItem}
+                          className="text-sm font-bold text-slate-900 hover:underline"
+                        >
+                          + Qo‘shish
+                        </button>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
 
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  To‘langan summa
-                </label>
-                <input
-                  value={paidAmount}
-                  onChange={(event) => setPaidAmount(event.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
-                  placeholder="0"
-                />
-              </div>
+                      <div className="space-y-3">
+                        {items.map((item, index) => {
+                          const product = productsById.get(item.productId);
+                          const quantity = Number(item.quantity);
+                          const rowTotal =
+                            product && Number.isFinite(quantity) && quantity > 0
+                              ? product.price * quantity
+                              : 0;
 
-              <div className="rounded-2xl bg-slate-50 p-4 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Jami</span>
-                  <span className="font-bold text-slate-900">
-                    {formatMoney(totalAmount)}
-                  </span>
-                </div>
+                          return (
+                            <div
+                              key={index}
+                              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                            >
+                              <div>
+                                <label className="mb-2 block text-xs font-semibold text-slate-500">
+                                  Mahsulot
+                                </label>
+                                <select
+                                  value={item.productId}
+                                  onChange={(event) =>
+                                    updateItem(
+                                      index,
+                                      "productId",
+                                      event.target.value,
+                                    )
+                                  }
+                                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
+                                >
+                                  <option value="">Mahsulot tanlang</option>
+                                  {products.map((productItem) => (
+                                    <option
+                                      key={productItem.id}
+                                      value={productItem.id}
+                                    >
+                                      {productItem.name} ·{" "}
+                                      {formatMoney(productItem.price)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
 
-                <div className="mt-2 flex justify-between">
-                  <span className="text-slate-500">Qarz</span>
-                  <span
-                    className={
-                      debtAmount > 0
-                        ? 'font-bold text-red-600'
-                        : 'font-bold text-emerald-600'
-                    }
-                  >
-                    {formatMoney(debtAmount)}
-                  </span>
-                </div>
-              </div>
+                              <div className="mt-3 grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="mb-2 block text-xs font-semibold text-slate-500">
+                                    Soni
+                                  </label>
+                                  <input
+                                    value={item.quantity}
+                                    onChange={(event) =>
+                                      updateItem(
+                                        index,
+                                        "quantity",
+                                        event.target.value,
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900 outline-none focus:border-slate-900"
+                                  />
+                                </div>
 
-              <button
-                type="submit"
-                disabled={isCreating}
-                className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isCreating ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <LoadingSpinner />
-                    Yaratilmoqda...
-                  </span>
-                ) : (
-                  'Zakaz yaratish'
-                )}
-              </button>
+                                <div>
+                                  <label className="mb-2 block text-xs font-semibold text-slate-500">
+                                    Narx
+                                  </label>
+                                  <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-900">
+                                    {formatMoney(product?.price)}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-3 flex items-center justify-between rounded-xl bg-white px-3 py-2 text-sm">
+                                <span className="text-slate-500">
+                                  Qator jami
+                                </span>
+                                <span className="font-bold text-slate-900">
+                                  {formatMoney(rowTotal)}
+                                </span>
+                              </div>
+
+                              {items.length > 1 ? (
+                                <button
+                                  type="button"
+                                  onClick={() => removeItem(index)}
+                                  className="mt-3 text-sm font-semibold text-red-600 hover:underline"
+                                >
+                                  Qatorni olib tashlash
+                                </button>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        To‘langan summa
+                      </label>
+                      <input
+                        value={paidAmount}
+                        onChange={(event) => setPaidAmount(event.target.value)}
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
+                        placeholder="0"
+                      />
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-50 p-4 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Jami</span>
+                        <span className="font-bold text-slate-900">
+                          {formatMoney(totalAmount)}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 flex justify-between">
+                        <span className="text-slate-500">Qarz</span>
+                        <span
+                          className={
+                            debtAmount > 0
+                              ? "font-bold text-red-600"
+                              : "font-bold text-emerald-600"
+                          }
+                        >
+                          {formatMoney(debtAmount)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isCreating}
+                      className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isCreating ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <LoadingSpinner />
+                          Yaratilmoqda...
+                        </span>
+                      ) : (
+                        "Zakaz yaratish"
+                      )}
+                    </button>
                   </form>
                 </section>
               </div>
@@ -698,7 +715,7 @@ export default function OrdersPage() {
                   disabled={isLoading}
                   className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isLoading ? 'Yuklanmoqda...' : 'Yangilash'}
+                  {isLoading ? "Yuklanmoqda..." : "Yangilash"}
                 </button>
               </div>
 
@@ -740,16 +757,16 @@ export default function OrdersPage() {
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-slate-500">
-                  Ko‘rsatilmoqda:{' '}
+                  Ko‘rsatilmoqda:{" "}
                   <span className="font-bold text-slate-900">
                     {filteredOrders.length}
-                  </span>{' '}
+                  </span>{" "}
                   / {orders.length}
                 </p>
 
                 {searchQuery ||
-                statusFilter !== 'ALL' ||
-                debtFilter !== 'ALL' ? (
+                statusFilter !== "ALL" ||
+                debtFilter !== "ALL" ? (
                   <button
                     type="button"
                     onClick={resetFilters}
@@ -816,7 +833,7 @@ export default function OrdersPage() {
                           {formatDate(order.createdAt)}
                           {order.createdBy
                             ? ` · ${order.createdBy.fullName}`
-                            : ''}
+                            : ""}
                         </p>
                       </div>
 
@@ -833,8 +850,8 @@ export default function OrdersPage() {
                           <span
                             className={
                               order.debtAmount > 0
-                                ? 'font-bold text-red-600'
-                                : 'font-bold text-emerald-600'
+                                ? "font-bold text-red-600"
+                                : "font-bold text-emerald-600"
                             }
                           >
                             {formatMoney(order.debtAmount)}

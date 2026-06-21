@@ -18,7 +18,7 @@ type Driver = {
 
 type ReadyOrder = {
   id: string;
-  status: "PREPARING";
+  status: "READY";
   totalAmount: number;
   createdAt: string;
   customer: {
@@ -88,7 +88,7 @@ const availabilityClass: Record<DriverAvailability, string> = {
 };
 
 const statusLabels: Record<ReadyOrder["status"], string> = {
-  PREPARING: "Tayyorlanmoqda",
+  READY: "Tayyor",
 };
 
 type SavedUser = {
@@ -373,8 +373,7 @@ export default function DeliveryDispatchPage() {
                       Reysga tayyor zakazlar
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                      PREPARING holatdagi, hali aktiv reysga qo‘shilmagan
-                      zakazlar.
+                      READY holatdagi, hali aktiv reysga qo‘shilmagan zakazlar.
                     </p>
                   </div>
 
