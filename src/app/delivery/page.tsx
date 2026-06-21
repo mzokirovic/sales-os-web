@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/app-shell';
 import { LoadingSpinner } from '@/components/loading-spinner';
@@ -17,7 +18,7 @@ type Driver = {
 
 type ReadyOrder = {
   id: string;
-  status: 'CONFIRMED' | 'PREPARING';
+  status: 'PREPARING';
   totalAmount: number;
   createdAt: string;
   customer: {
@@ -87,9 +88,18 @@ const availabilityClass: Record<DriverAvailability, string> = {
 };
 
 const statusLabels: Record<ReadyOrder['status'], string> = {
-  CONFIRMED: 'Tasdiqlandi',
   PREPARING: 'Tayyorlanmoqda',
 };
+
+type SavedUser = {
+  role?: string | null;
+};
+
+const deliveryDispatchRoles = ['OWNER', 'MANAGER', 'OPERATOR', 'WAREHOUSE'];
+
+function canAccessDeliveryDispatch(role: string | null | undefined) {
+  return Boolean(role && deliveryDispatchRoles.includes(role));
+}
 
 const tripStatusLabels: Record<ActiveTrip['status'], string> = {
   PLANNED: 'Rejada',
@@ -116,6 +126,8 @@ function formatDate(value: string) {
 }
 
 export default function DeliveryDispatchPage() {
+  const router = useRouter();
+
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [orders, setOrders] = useState<ReadyOrder[]>([]);
   const [trips, setTrips] = useState<ActiveTrip[]>([]);
@@ -125,6 +137,7 @@ export default function DeliveryDispatchPage() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -139,8 +152,29 @@ export default function DeliveryDispatchPage() {
   );
 
   useEffect(() => {
-    loadData();
-  }, []);
+    const savedUser = localStorage.getItem('user');
+
+    if (!savedUser) {
+      router.push('/login');
+      return;
+    }
+
+    try {
+      const user = JSON.parse(savedUser) as SavedUser;
+
+      if (!canAccessDeliveryDispatch(user.role)) {
+        router.push('/dashboard');
+        return;
+      }
+
+      setIsAuthorized(true);
+      loadData();
+    } catch {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      router.push('/login');
+    }
+  }, [router]);
 
   async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const token = localStorage.getItem('accessToken');
@@ -240,6 +274,16 @@ export default function DeliveryDispatchPage() {
     } finally {
       setIsCreating(false);
     }
+  }
+
+  if (!isAuthorized) {
+    return (
+      <AppShell>
+        <div className="rounded-3xl bg-white p-8 shadow-sm">
+          <LoadingSpinner />
+        </div>
+      </AppShell>
+    );
   }
 
   return (
