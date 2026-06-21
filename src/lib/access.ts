@@ -1,79 +1,79 @@
 export type Role =
-  | 'OWNER'
-  | 'MANAGER'
-  | 'SALES'
-  | 'OPERATOR'
-  | 'WAREHOUSE'
-  | 'DELIVERY';
+  | "OWNER"
+  | "MANAGER"
+  | "SALES"
+  | "OPERATOR"
+  | "WAREHOUSE"
+  | "DELIVERY";
 
 export type OrderStatus =
-  | 'NEW'
-  | 'CHECKED'
-  | 'CONFIRMED'
-  | 'PREPARING'
-  | 'SHIPPED'
-  | 'DELIVERED'
-  | 'PAID';
+  | "NEW"
+  | "CHECKED"
+  | "CONFIRMED"
+  | "PREPARING"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "PAID";
 
-export type PaymentStatus = 'UNPAID' | 'PARTIAL' | 'PAID';
+export type PaymentStatus = "UNPAID" | "PARTIAL" | "PAID";
 
 export const fulfillmentStatusFlow: OrderStatus[] = [
-  'NEW',
-  'CHECKED',
-  'CONFIRMED',
-  'PREPARING',
-  'SHIPPED',
-  'DELIVERED',
+  "NEW",
+  "CHECKED",
+  "CONFIRMED",
+  "PREPARING",
+  "SHIPPED",
+  "DELIVERED",
 ];
 
 export function isRole(value: string | null | undefined): value is Role {
   return (
-    value === 'OWNER' ||
-    value === 'MANAGER' ||
-    value === 'SALES' ||
-    value === 'OPERATOR' ||
-    value === 'WAREHOUSE' ||
-    value === 'DELIVERY'
+    value === "OWNER" ||
+    value === "MANAGER" ||
+    value === "SALES" ||
+    value === "OPERATOR" ||
+    value === "WAREHOUSE" ||
+    value === "DELIVERY"
   );
 }
 
 export function canCreateCustomer(role: string | null | undefined) {
-  return role === 'OWNER' || role === 'MANAGER' || role === 'SALES';
+  return role === "OWNER" || role === "MANAGER" || role === "SALES";
 }
 
 export function canCreateOrder(role: string | null | undefined) {
   return (
-    role === 'OWNER' ||
-    role === 'MANAGER' ||
-    role === 'SALES' ||
-    role === 'OPERATOR'
+    role === "OWNER" ||
+    role === "MANAGER" ||
+    role === "SALES" ||
+    role === "OPERATOR"
   );
 }
 
 export function canAddPayment(role: string | null | undefined) {
   return (
-    role === 'OWNER' ||
-    role === 'MANAGER' ||
-    role === 'SALES' ||
-    role === 'OPERATOR'
+    role === "OWNER" ||
+    role === "MANAGER" ||
+    role === "SALES" ||
+    role === "OPERATOR"
   );
 }
 
 export function canManageProducts(role: string | null | undefined) {
-  return role === 'OWNER' || role === 'MANAGER';
+  return role === "OWNER" || role === "MANAGER";
 }
 
 export function canManageEmployees(role: string | null | undefined) {
-  return role === 'OWNER';
+  return role === "OWNER" || role === "MANAGER";
 }
 
 export function canUpdateOrderStatus(role: string | null | undefined) {
   return (
-    role === 'OWNER' ||
-    role === 'MANAGER' ||
-    role === 'OPERATOR' ||
-    role === 'WAREHOUSE' ||
-    role === 'DELIVERY'
+    role === "OWNER" ||
+    role === "MANAGER" ||
+    role === "OPERATOR" ||
+    role === "WAREHOUSE" ||
+    role === "DELIVERY"
   );
 }
 
@@ -81,30 +81,30 @@ export function nextStatusForRole(
   role: string | null | undefined,
   currentStatus: OrderStatus,
 ): OrderStatus | null {
-  if (currentStatus === 'PAID') return null;
+  if (currentStatus === "PAID") return null;
 
   const nextStatus = getNextFulfillmentStatus(currentStatus);
 
   if (!nextStatus) return null;
 
-  if (role === 'OWNER' || role === 'MANAGER') {
+  if (role === "OWNER" || role === "MANAGER") {
     return nextStatus;
   }
 
-  if (role === 'OPERATOR') {
-    return nextStatus === 'CHECKED' || nextStatus === 'CONFIRMED'
+  if (role === "OPERATOR") {
+    return nextStatus === "CHECKED" || nextStatus === "CONFIRMED"
       ? nextStatus
       : null;
   }
 
-  if (role === 'WAREHOUSE') {
-    return nextStatus === 'PREPARING' || nextStatus === 'SHIPPED'
+  if (role === "WAREHOUSE") {
+    return nextStatus === "PREPARING" || nextStatus === "SHIPPED"
       ? nextStatus
       : null;
   }
 
-  if (role === 'DELIVERY') {
-    return nextStatus === 'DELIVERED' ? nextStatus : null;
+  if (role === "DELIVERY") {
+    return nextStatus === "DELIVERED" ? nextStatus : null;
   }
 
   return null;

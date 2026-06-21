@@ -1,12 +1,18 @@
-'use client';
+"use client";
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { AppShell } from '@/components/app-shell';
-import { LoadingSpinner } from '@/components/loading-spinner';
-import { canManageEmployees } from '@/lib/access';
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AppShell } from "@/components/app-shell";
+import { LoadingSpinner } from "@/components/loading-spinner";
+import { canManageEmployees } from "@/lib/access";
 
-type Role = 'OWNER' | 'MANAGER' | 'SALES' | 'OPERATOR' | 'WAREHOUSE' | 'DELIVERY';
+type Role =
+  | "OWNER"
+  | "MANAGER"
+  | "SALES"
+  | "OPERATOR"
+  | "WAREHOUSE"
+  | "DELIVERY";
 
 type User = {
   id: string;
@@ -24,57 +30,76 @@ type EmployeeForm = {
   role: Role;
 };
 
-type RoleFilter = 'ALL' | Role;
+type RoleFilter = "ALL" | Role;
 
 const initialForm: EmployeeForm = {
-  fullName: '',
-  phone: '',
-  password: '123456',
-  role: 'SALES',
+  fullName: "",
+  phone: "",
+  password: "123456",
+  role: "SALES",
 };
 
 const roleLabels: Record<Role, string> = {
-  OWNER: 'Direktor',
-  MANAGER: 'Manager',
-  SALES: 'Sotuvchi',
-  OPERATOR: 'Operator',
-  WAREHOUSE: 'Sklad',
-  DELIVERY: 'Yetkazuvchi',
+  OWNER: "Direktor",
+  MANAGER: "Manager",
+  SALES: "Sotuvchi",
+  OPERATOR: "Operator",
+  WAREHOUSE: "Sklad",
+  DELIVERY: "Yetkazuvchi",
 };
 
 const roleDescriptions: Record<Role, string> = {
-  OWNER: 'Tizim egasi. Barcha ma’lumotlarni boshqaradi.',
-  MANAGER: 'Jamoani va asosiy jarayonlarni nazorat qiladi.',
-  SALES: 'Mijoz qo‘shadi va o‘z zakazlarini yuritadi.',
-  OPERATOR: 'Zakazlarni tekshiradi va tasdiqlashga tayyorlaydi.',
-  WAREHOUSE: 'Sklad tayyorlash va jo‘natish bosqichlari.',
-  DELIVERY: 'Yetkazish bosqichini yuritadi.',
+  OWNER: "Tizim egasi. Barcha ma’lumotlarni boshqaradi.",
+  MANAGER: "Jamoani va asosiy jarayonlarni nazorat qiladi.",
+  SALES: "Mijoz qo‘shadi va o‘z zakazlarini yuritadi.",
+  OPERATOR: "Zakazlarni tekshiradi va tasdiqlashga tayyorlaydi.",
+  WAREHOUSE: "Sklad tayyorlash va jo‘natish bosqichlari.",
+  DELIVERY: "Yetkazish bosqichini yuritadi.",
 };
 
 const roleBadgeClass: Record<Role, string> = {
-  OWNER: 'bg-slate-900 text-white',
-  MANAGER: 'bg-violet-50 text-violet-700',
-  SALES: 'bg-blue-50 text-blue-700',
-  OPERATOR: 'bg-indigo-50 text-indigo-700',
-  WAREHOUSE: 'bg-amber-50 text-amber-700',
-  DELIVERY: 'bg-emerald-50 text-emerald-700',
+  OWNER: "bg-slate-900 text-white",
+  MANAGER: "bg-violet-50 text-violet-700",
+  SALES: "bg-blue-50 text-blue-700",
+  OPERATOR: "bg-indigo-50 text-indigo-700",
+  WAREHOUSE: "bg-amber-50 text-amber-700",
+  DELIVERY: "bg-emerald-50 text-emerald-700",
 };
 
-const creatableRoles: Role[] = [
-  'MANAGER',
-  'SALES',
-  'OPERATOR',
-  'WAREHOUSE',
-  'DELIVERY',
+const ownerCreatableRoles: Role[] = [
+  "MANAGER",
+  "SALES",
+  "OPERATOR",
+  "WAREHOUSE",
+  "DELIVERY",
 ];
 
+const managerCreatableRoles: Role[] = [
+  "SALES",
+  "OPERATOR",
+  "WAREHOUSE",
+  "DELIVERY",
+];
+
+function getCreatableRolesForUser(role: string | null | undefined): Role[] {
+  if (role === "OWNER") {
+    return ownerCreatableRoles;
+  }
+
+  if (role === "MANAGER") {
+    return managerCreatableRoles;
+  }
+
+  return [];
+}
+
 const filterRoles: Role[] = [
-  'OWNER',
-  'MANAGER',
-  'SALES',
-  'OPERATOR',
-  'WAREHOUSE',
-  'DELIVERY',
+  "OWNER",
+  "MANAGER",
+  "SALES",
+  "OPERATOR",
+  "WAREHOUSE",
+  "DELIVERY",
 ];
 
 function sleep(ms: number) {
@@ -92,19 +117,23 @@ export default function EmployeesPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   const [form, setForm] = useState<EmployeeForm>(initialForm);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<RoleFilter>('ALL');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("ALL");
 
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const [error, setError] = useState('');
-  const [formError, setFormError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [error, setError] = useState("");
+  const [formError, setFormError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const canManage = canManageEmployees(currentUser?.role);
+  const availableCreatableRoles = useMemo(
+    () => getCreatableRolesForUser(currentUser?.role),
+    [currentUser?.role],
+  );
 
   const filteredEmployees = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -117,7 +146,7 @@ export default function EmployeesPage() {
         roleLabels[employee.role].toLowerCase().includes(query) ||
         employee.role.toLowerCase().includes(query);
 
-      const matchesRole = roleFilter === 'ALL' || employee.role === roleFilter;
+      const matchesRole = roleFilter === "ALL" || employee.role === roleFilter;
 
       return matchesSearch && matchesRole;
     });
@@ -138,10 +167,10 @@ export default function EmployeesPage() {
   }, [employees]);
 
   function getToken() {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem("accessToken");
 
     if (!token) {
-      router.push('/login');
+      router.push("/login");
       return null;
     }
 
@@ -149,10 +178,10 @@ export default function EmployeesPage() {
   }
 
   function loadCurrentUser() {
-    const savedUser = localStorage.getItem('user');
+    const savedUser = localStorage.getItem("user");
 
     if (!savedUser) {
-      router.push('/login');
+      router.push("/login");
       return null;
     }
 
@@ -163,7 +192,7 @@ export default function EmployeesPage() {
   }
 
   async function loadEmployees() {
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
@@ -179,24 +208,24 @@ export default function EmployeesPage() {
       });
 
       if (response.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('user');
-        router.push('/login');
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("user");
+        router.push("/login");
         return;
       }
 
       if (response.status === 403) {
-        throw new Error('Xodimlar ro‘yxatini ko‘rish uchun ruxsat yo‘q');
+        throw new Error("Xodimlar ro‘yxatini ko‘rish uchun ruxsat yo‘q");
       }
 
       if (!response.ok) {
-        throw new Error('Xodimlarni yuklashda xatolik');
+        throw new Error("Xodimlarni yuklashda xatolik");
       }
 
       const data = (await response.json()) as User[];
       setEmployees(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setError(err instanceof Error ? err.message : "Noma’lum xatolik");
     } finally {
       setIsLoading(false);
     }
@@ -208,33 +237,46 @@ export default function EmployeesPage() {
   }, []);
 
   useEffect(() => {
+    if (availableCreatableRoles.length === 0) {
+      return;
+    }
+
+    if (!availableCreatableRoles.includes(form.role)) {
+      setForm((current) => ({
+        ...current,
+        role: availableCreatableRoles[0],
+      }));
+    }
+  }, [availableCreatableRoles, form.role]);
+
+  useEffect(() => {
     if (!isCreateOpen) return;
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape' && !isCreating) {
-        setFormError('');
+      if (event.key === "Escape" && !isCreating) {
+        setFormError("");
         setIsCreateOpen(false);
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isCreateOpen, isCreating]);
 
   function openCreateModal() {
-    setError('');
-    setFormError('');
-    setSuccessMessage('');
+    setError("");
+    setFormError("");
+    setSuccessMessage("");
     setIsCreateOpen(true);
   }
 
   function closeCreateModal() {
     if (isCreating) return;
 
-    setFormError('');
+    setFormError("");
     setIsCreateOpen(false);
   }
 
@@ -247,26 +289,26 @@ export default function EmployeesPage() {
 
   function validateForm() {
     if (!form.fullName.trim()) {
-      return 'Xodim ismi majburiy';
+      return "Xodim ismi majburiy";
     }
 
     if (!form.phone.trim()) {
-      return 'Telefon raqam majburiy';
+      return "Telefon raqam majburiy";
     }
 
     if (!form.password.trim() || form.password.length < 6) {
-      return 'Parol kamida 6 ta belgidan iborat bo‘lishi kerak';
+      return "Parol kamida 6 ta belgidan iborat bo‘lishi kerak";
     }
 
-    return '';
+    return "";
   }
 
   async function createEmployee(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setError('');
-    setFormError('');
-    setSuccessMessage('');
+    setError("");
+    setFormError("");
+    setSuccessMessage("");
 
     const validationError = validateForm();
 
@@ -283,10 +325,10 @@ export default function EmployeesPage() {
 
       const [response] = await Promise.all([
         fetch(`${apiUrl}/users`, {
-          method: 'POST',
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             fullName: form.fullName.trim(),
@@ -299,33 +341,33 @@ export default function EmployeesPage() {
       ]);
 
       if (response.status === 403) {
-        throw new Error('Faqat OWNER xodim qo‘sha oladi');
+        throw new Error("Faqat OWNER xodim qo‘sha oladi");
       }
 
       if (response.status === 409) {
-        throw new Error('Bu telefon raqam bilan xodim allaqachon mavjud');
+        throw new Error("Bu telefon raqam bilan xodim allaqachon mavjud");
       }
 
       if (!response.ok) {
-        throw new Error('Xodim qo‘shishda xatolik');
+        throw new Error("Xodim qo‘shishda xatolik");
       }
 
       setForm(initialForm);
-      setFormError('');
+      setFormError("");
       setIsCreateOpen(false);
-      setSuccessMessage('Xodim qo‘shildi');
+      setSuccessMessage("Xodim qo‘shildi");
 
       await loadEmployees();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Noma’lum xatolik');
+      setFormError(err instanceof Error ? err.message : "Noma’lum xatolik");
     } finally {
       setIsCreating(false);
     }
   }
 
   function resetFilters() {
-    setSearchQuery('');
-    setRoleFilter('ALL');
+    setSearchQuery("");
+    setRoleFilter("ALL");
   }
 
   return (
@@ -334,9 +376,7 @@ export default function EmployeesPage() {
         <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="text-sm font-medium text-slate-500">Employees</p>
-            <h1 className="mt-2 text-3xl font-bold text-slate-900">
-              Xodimlar
-            </h1>
+            <h1 className="mt-2 text-3xl font-bold text-slate-900">Xodimlar</h1>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -350,7 +390,7 @@ export default function EmployeesPage() {
             <div className="rounded-2xl bg-white px-5 py-4 shadow-sm">
               <p className="text-sm text-slate-500">Sotuvchilar</p>
               <p className="mt-1 text-2xl font-bold text-blue-600">
-                {roleCounts.get('SALES') ?? 0}
+                {roleCounts.get("SALES") ?? 0}
               </p>
             </div>
           </div>
@@ -368,7 +408,7 @@ export default function EmployeesPage() {
           </div>
         ) : null}
 
-                {canManage ? (
+        {canManage ? (
           <div className="mb-6 flex justify-end">
             <button
               type="button"
@@ -412,82 +452,83 @@ export default function EmployeesPage() {
                     </div>
                   ) : null}
 
-                <form onSubmit={createEmployee} className="space-y-4">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Xodim ismi *
-                  </label>
-                  <input
-                    value={form.fullName}
-                    onChange={(event) =>
-                      updateForm('fullName', event.target.value)
-                    }
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
-                    placeholder="Masalan: Sardor Sales"
-                  />
-                </div>
+                  <form onSubmit={createEmployee} className="space-y-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        Xodim ismi *
+                      </label>
+                      <input
+                        value={form.fullName}
+                        onChange={(event) =>
+                          updateForm("fullName", event.target.value)
+                        }
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
+                        placeholder="Masalan: Sardor Sales"
+                      />
+                    </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Telefon *
-                  </label>
-                  <input
-                    value={form.phone}
-                    onChange={(event) => updateForm('phone', event.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
-                    placeholder="+998901234567"
-                  />
-                </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        Telefon *
+                      </label>
+                      <input
+                        value={form.phone}
+                        onChange={(event) =>
+                          updateForm("phone", event.target.value)
+                        }
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
+                        placeholder="+998901234567"
+                      />
+                    </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Boshlang‘ich parol *
-                  </label>
-                  <input
-                    value={form.password}
-                    onChange={(event) =>
-                      updateForm('password', event.target.value)
-                    }
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
-                    placeholder="123456"
-                  />
-                </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        Boshlang‘ich parol *
+                      </label>
+                      <input
+                        value={form.password}
+                        onChange={(event) =>
+                          updateForm("password", event.target.value)
+                        }
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
+                        placeholder="123456"
+                      />
+                    </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Role
-                  </label>
-                  <select
-                    value={form.role}
-                    onChange={(event) =>
-                      updateForm('role', event.target.value as Role)
-                    }
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
-                  >
-                    {creatableRoles.map((role) => (
-                      <option key={role} value={role}>
-                        {roleLabels[role]}
-                      </option>
-                    ))}
-                  </select>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        Role
+                      </label>
+                      <select
+                        value={form.role}
+                        onChange={(event) =>
+                          updateForm("role", event.target.value as Role)
+                        }
+                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-slate-900 outline-none focus:border-slate-900"
+                      >
+                        {availableCreatableRoles.map((role) => (
+                          <option key={role} value={role}>
+                            {roleLabels[role]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isCreating}
-                  className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isCreating ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <LoadingSpinner />
-                      Qo‘shilmoqda...
-                    </span>
-                  ) : (
-                    'Xodim qo‘shish'
-                  )}
-                </button>
-              </form>
+                    <button
+                      type="submit"
+                      disabled={isCreating}
+                      className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isCreating ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <LoadingSpinner />
+                          Qo‘shilmoqda...
+                        </span>
+                      ) : (
+                        "Xodim qo‘shish"
+                      )}
+                    </button>
+                  </form>
                 </section>
               </div>
             </div>
@@ -508,7 +549,7 @@ export default function EmployeesPage() {
                   disabled={isLoading}
                   className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isLoading ? 'Yuklanmoqda...' : 'Yangilash'}
+                  {isLoading ? "Yuklanmoqda..." : "Yangilash"}
                 </button>
               </div>
 
@@ -538,14 +579,14 @@ export default function EmployeesPage() {
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-slate-500">
-                  Ko‘rsatilmoqda:{' '}
+                  Ko‘rsatilmoqda:{" "}
                   <span className="font-bold text-slate-900">
                     {filteredEmployees.length}
-                  </span>{' '}
+                  </span>{" "}
                   / {employees.length}
                 </p>
 
-                {searchQuery || roleFilter !== 'ALL' ? (
+                {searchQuery || roleFilter !== "ALL" ? (
                   <button
                     type="button"
                     onClick={resetFilters}
@@ -608,7 +649,6 @@ export default function EmployeesPage() {
                         <p className="mt-1 text-sm text-slate-500">
                           {employee.phone}
                         </p>
-
                       </div>
 
                       <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm md:min-w-40">

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { ReactNode, useEffect, useState } from 'react';
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { ReactNode, useEffect, useState } from "react";
 
 type User = {
   id: string;
@@ -21,39 +21,40 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   {
-    label: 'Dashboard',
-    shortLabel: 'D',
-    href: '/dashboard',
+    label: "Dashboard",
+    shortLabel: "D",
+    href: "/dashboard",
   },
   {
-    label: 'Customers',
-    shortLabel: 'C',
-    href: '/customers',
+    label: "Customers",
+    shortLabel: "C",
+    href: "/customers",
   },
   {
-    label: 'Products',
-    shortLabel: 'P',
-    href: '/products',
+    label: "Products",
+    shortLabel: "P",
+    href: "/products",
   },
   {
-    label: 'Orders',
-    shortLabel: 'O',
-    href: '/orders',
+    label: "Orders",
+    shortLabel: "O",
+    href: "/orders",
   },
   {
-    label: 'Delivery',
-    shortLabel: 'R',
-    href: '/delivery',
-    roles: ['OWNER', 'MANAGER', 'OPERATOR', 'WAREHOUSE'],
+    label: "Delivery",
+    shortLabel: "R",
+    href: "/delivery",
+    roles: ["OWNER", "MANAGER", "OPERATOR", "WAREHOUSE"],
   },
   {
-    label: 'Employees',
-    shortLabel: 'E',
-    href: '/employees',
+    label: "Employees",
+    shortLabel: "E",
+    href: "/employees",
+    roles: ["OWNER", "MANAGER"],
   },
 ];
 
-const SIDEBAR_STORAGE_KEY = 'sales-os-sidebar-collapsed';
+const SIDEBAR_STORAGE_KEY = "sales-os-sidebar-collapsed";
 
 function HamburgerIcon() {
   return (
@@ -73,24 +74,24 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    const savedUser = localStorage.getItem('user');
+    const token = localStorage.getItem("accessToken");
+    const savedUser = localStorage.getItem("user");
 
     if (!token || !savedUser) {
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
     setUser(JSON.parse(savedUser) as User);
 
     const savedSidebarState = localStorage.getItem(SIDEBAR_STORAGE_KEY);
-    setIsSidebarCollapsed(savedSidebarState === 'true');
+    setIsSidebarCollapsed(savedSidebarState === "true");
   }, [router]);
 
   function logout() {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('user');
-    router.push('/login');
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("user");
+    router.push("/login");
   }
 
   function toggleSidebar() {
@@ -115,22 +116,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         <aside
           className={
             isSidebarCollapsed
-              ? 'sticky top-0 hidden h-screen w-16 shrink-0 self-start overflow-y-auto border-r border-slate-200 bg-white px-3 py-4 transition-all md:block'
-              : 'sticky top-0 hidden h-screen w-72 shrink-0 self-start overflow-y-auto border-r border-slate-200 bg-white p-5 transition-all md:block'
+              ? "sticky top-0 hidden h-screen w-16 shrink-0 self-start overflow-y-auto border-r border-slate-200 bg-white px-3 py-4 transition-all md:block"
+              : "sticky top-0 hidden h-screen w-72 shrink-0 self-start overflow-y-auto border-r border-slate-200 bg-white p-5 transition-all md:block"
           }
         >
           <div
             className={
               isSidebarCollapsed
-                ? 'mb-6 flex justify-center'
-                : 'mb-8 flex items-start gap-3'
+                ? "mb-6 flex justify-center"
+                : "mb-8 flex items-start gap-3"
             }
           >
             <button
               type="button"
               onClick={toggleSidebar}
               title={
-                isSidebarCollapsed ? 'Sidebarni ochish' : 'Sidebarni yopish'
+                isSidebarCollapsed ? "Sidebarni ochish" : "Sidebarni yopish"
               }
               className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-100"
             >
@@ -140,9 +141,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {!isSidebarCollapsed ? (
               <div className="min-w-0">
                 <h1 className="text-xl font-bold text-slate-900">Sales OS</h1>
-                <p className="mt-1 text-sm text-slate-500">
-                  Sotuv boshqaruvi
-                </p>
+                <p className="mt-1 text-sm text-slate-500">Sotuv boshqaruvi</p>
               </div>
             ) : null}
           </div>
@@ -151,28 +150,29 @@ export function AppShell({ children }: { children: ReactNode }) {
             {navItems
               .filter((item) => !item.roles || item.roles.includes(user.role))
               .map((item) => {
-              const isActive =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={item.label}
-                  className={
-                    isActive
-                      ? isSidebarCollapsed
-                        ? 'flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-xs font-bold text-white'
-                        : 'block rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white'
-                      : isSidebarCollapsed
-                        ? 'flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                        : 'block rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                  }
-                >
-                  {isSidebarCollapsed ? item.shortLabel : item.label}
-                </Link>
-              );
-            })}
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    title={item.label}
+                    className={
+                      isActive
+                        ? isSidebarCollapsed
+                          ? "flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-xs font-bold text-white"
+                          : "block rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
+                        : isSidebarCollapsed
+                          ? "flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          : "block rounded-xl px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                    }
+                  >
+                    {isSidebarCollapsed ? item.shortLabel : item.label}
+                  </Link>
+                );
+              })}
           </nav>
 
           {!isSidebarCollapsed ? (
