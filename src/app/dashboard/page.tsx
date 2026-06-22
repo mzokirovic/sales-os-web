@@ -19,8 +19,8 @@ type OrderStatus =
 type RecentOrder = {
   id: string;
   status: OrderStatus;
-  totalAmount: number;
-  debtAmount: number;
+  totalAmount?: number;
+  debtAmount?: number;
   createdAt: string;
   customer: {
     id: string;
@@ -37,14 +37,15 @@ type RecentOrder = {
     id: string;
     productName: string;
     quantity: number;
-    price: number;
-    total: number;
+    price?: number;
+    total?: number;
   }[];
 };
 
 type DashboardSummary = {
-  totalSales: number;
-  openDebt: number;
+  canViewMoney?: boolean;
+  totalSales?: number;
+  openDebt?: number;
   ordersCount: number;
   customersCount: number;
   productsCount: number;
@@ -126,17 +127,21 @@ export default function DashboardPage() {
     return Math.max(...values, 1);
   }, [statusCountMap]);
 
-  const debtRatio = useMemo(() => {
-    if (!summary || summary.totalSales <= 0) return 0;
+  const canViewMoney = summary?.canViewMoney === true;
 
-    return Math.round((summary.openDebt / summary.totalSales) * 100);
-  }, [summary]);
+  const debtRatio = useMemo(() => {
+    if (!canViewMoney || !summary?.totalSales || summary.totalSales <= 0) {
+      return 0;
+    }
+
+    return Math.round(((summary.openDebt ?? 0) / summary.totalSales) * 100);
+  }, [canViewMoney, summary]);
 
   const paidAmount = useMemo(() => {
-    if (!summary) return 0;
+    if (!canViewMoney) return 0;
 
-    return Math.max(summary.totalSales - summary.openDebt, 0);
-  }, [summary]);
+    return Math.max((summary?.totalSales ?? 0) - (summary?.openDebt ?? 0), 0);
+  }, [canViewMoney, summary]);
 
   async function loadSummary() {
     setError("");
@@ -241,35 +246,86 @@ export default function DashboardPage() {
         ) : summary ? (
           <>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm font-medium text-slate-500">Jami savdo</p>
-                <p className="mt-3 text-2xl font-bold text-slate-900">
-                  {formatMoney(summary.totalSales)}
-                </p>
-                <p className="mt-2 text-sm text-slate-500">
-                  Barcha zakazlar bo‘yicha
-                </p>
-              </div>
+              {canViewMoney ? (
+                <>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p className="text-sm font-medium text-slate-500">
+                      Jami savdo
+                    </p>
+                    <p className="mt-3 text-2xl font-bold text-slate-900">
+                      {formatMoney(summary.totalSales ?? 0)}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Barcha zakazlar bo‘yicha
+                    </p>
+                  </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm font-medium text-slate-500">To‘langan</p>
-                <p className="mt-3 text-2xl font-bold text-emerald-600">
-                  {formatMoney(paidAmount)}
-                </p>
-                <p className="mt-2 text-sm text-slate-500">
-                  Jami savdodan qarz ayrilgani
-                </p>
-              </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p className="text-sm font-medium text-slate-500">
+                      To‘langan
+                    </p>
+                    <p className="mt-3 text-2xl font-bold text-emerald-600">
+                      {formatMoney(paidAmount)}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Jami savdodan qarz ayrilgani
+                    </p>
+                  </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm font-medium text-slate-500">Ochiq qarz</p>
-                <p className="mt-3 text-2xl font-bold text-red-600">
-                  {formatMoney(summary.openDebt)}
-                </p>
-                <p className="mt-2 text-sm text-slate-500">
-                  Qarzdorlik ulushi: {debtRatio}%
-                </p>
-              </div>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p className="text-sm font-medium text-slate-500">
+                      Ochiq qarz
+                    </p>
+                    <p className="mt-3 text-2xl font-bold text-red-600">
+                      {formatMoney(summary.openDebt ?? 0)}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Qarzdorlik ulushi: {debtRatio}%
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p className="text-sm font-medium text-slate-500">
+                      Yangi zakazlar
+                    </p>
+                    <p className="mt-3 text-2xl font-bold text-slate-900">
+                      {summary.newOrdersCount}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Operatsion ko‘rsatkich
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p className="text-sm font-medium text-slate-500">
+                      Jarayondagi zakazlar
+                    </p>
+                    <p className="mt-3 text-2xl font-bold text-slate-900">
+                      {Math.max(
+                        summary.ordersCount - summary.newOrdersCount,
+                        0,
+                      )}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Pul ma’lumotlarisiz
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <p className="text-sm font-medium text-slate-500">
+                      Aktiv mahsulotlar
+                    </p>
+                    <p className="mt-3 text-2xl font-bold text-slate-900">
+                      {summary.activeProductsCount}
+                    </p>
+                    <p className="mt-2 text-sm text-slate-500">
+                      Sklad ko‘rsatkichi
+                    </p>
+                  </div>
+                </>
+              )}
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <p className="text-sm font-medium text-slate-500">Zakazlar</p>
@@ -418,27 +474,29 @@ export default function DashboardPage() {
                           </div>
                         </div>
 
-                        <div className="w-full rounded-2xl bg-slate-50 p-4 text-sm md:w-56 md:shrink-0">
-                          <div className="flex justify-between">
-                            <span className="text-slate-500">Jami</span>
-                            <span className="font-bold text-slate-900">
-                              {formatMoney(order.totalAmount)}
-                            </span>
-                          </div>
+                        {canViewMoney ? (
+                          <div className="w-full rounded-2xl bg-slate-50 p-4 text-sm md:w-56 md:shrink-0">
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Jami</span>
+                              <span className="font-bold text-slate-900">
+                                {formatMoney(order.totalAmount ?? 0)}
+                              </span>
+                            </div>
 
-                          <div className="mt-2 flex justify-between">
-                            <span className="text-slate-500">Qarz</span>
-                            <span
-                              className={
-                                order.debtAmount > 0
-                                  ? "font-bold text-red-600"
-                                  : "font-bold text-emerald-600"
-                              }
-                            >
-                              {formatMoney(order.debtAmount)}
-                            </span>
+                            <div className="mt-2 flex justify-between">
+                              <span className="text-slate-500">Qarz</span>
+                              <span
+                                className={
+                                  (order.debtAmount ?? 0) > 0
+                                    ? "font-bold text-red-600"
+                                    : "font-bold text-emerald-600"
+                                }
+                              >
+                                {formatMoney(order.debtAmount ?? 0)}
+                              </span>
+                            </div>
                           </div>
-                        </div>
+                        ) : null}
                       </div>
                     </div>
                   ))}
